@@ -116,6 +116,38 @@ header p{font-size:9px;color:#7da8d4;margin-top:1px}
 .addi:hover{background:#f8f8f8}
 .sll{font-family:'DM Mono',monospace;font-size:8.5px;font-weight:500;writing-mode:vertical-rl;transform:rotate(180deg);cursor:pointer;letter-spacing:.5px;opacity:.65;white-space:nowrap;display:flex;align-items:center;justify-content:center;height:100%}
 .sll:hover{opacity:1}
+
+/* ── SAVE STATUS ── */
+.save-status{font-size:8.5px;font-family:'DM Mono',monospace;padding:2px 8px;border-radius:20px;border:1px solid #e0ddd8;white-space:nowrap;transition:all .3s}
+.save-status.saved{color:#16a34a;background:#f0fdf4;border-color:#86efac}
+.save-status.saving{color:#d97706;background:#fffbeb;border-color:#fcd34d}
+.save-status.unsaved{color:#dc2626;background:#fef2f2;border-color:#fca5a5}
+.save-status.idle{color:#94a3b8;background:var(--bg);border-color:#e0ddd8}
+
+/* ── GITHUB MODAL ── */
+.modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:2000;display:none;align-items:center;justify-content:center}
+.modal-backdrop.vis{display:flex}
+.modal{background:#fff;border-radius:12px;box-shadow:0 20px 60px rgba(0,0,0,.3);padding:24px 26px;width:420px;max-width:calc(100vw - 40px);font-family:'Epilogue',sans-serif}
+.modal h2{font-family:'DM Serif Display',serif;font-size:17px;color:#0f1f38;margin-bottom:4px}
+.modal p{font-size:11px;color:#64748b;margin-bottom:16px;line-height:1.5}
+.modal label{font-size:9px;font-family:'DM Mono',monospace;color:#888;display:block;margin-bottom:3px;margin-top:12px;letter-spacing:.5px;text-transform:uppercase}
+.modal label:first-of-type{margin-top:0}
+.modal input{width:100%;border:1px solid #ddd;border-radius:5px;padding:6px 9px;font-size:12px;font-family:'Epilogue',sans-serif;color:#1a1a2e}
+.modal input:focus{outline:none;border-color:#2563eb;box-shadow:0 0 0 3px rgba(37,99,235,.1)}
+.modal-hint{font-size:9.5px;color:#94a3b8;margin-top:4px;line-height:1.4}
+.modal-hint a{color:#2563eb}
+.modal-actions{display:flex;gap:8px;margin-top:18px}
+.modal-btn{flex:1;padding:7px;border-radius:6px;border:1px solid #ddd;font-size:11px;cursor:pointer;font-family:'Epilogue',sans-serif;font-weight:500;transition:all .15s}
+.modal-btn.primary{background:#0f1f38;color:#fff;border-color:#0f1f38}
+.modal-btn.primary:hover{background:#1e3a5f}
+.modal-btn.primary:disabled{background:#94a3b8;border-color:#94a3b8;cursor:not-allowed}
+.modal-btn.secondary{background:#fff;color:#333}
+.modal-btn.secondary:hover{background:var(--bg)}
+.modal-status{font-size:10.5px;margin-top:10px;padding:7px 10px;border-radius:5px;display:none}
+.modal-status.ok{background:#f0fdf4;color:#16a34a;border:1px solid #86efac;display:block}
+.modal-status.err{background:#fef2f2;color:#dc2626;border:1px solid #fca5a5;display:block}
+.modal-status.pending{background:#fffbeb;color:#d97706;border:1px solid #fcd34d;display:block}
+.modal-divider{border:none;border-top:1px solid #f0ede8;margin:14px 0}
 </style>
 </head>
 <body>
@@ -169,8 +201,12 @@ header p{font-size:9px;color:#7da8d4;margin-top:1px}
   <div class="tsep"></div>
   <button class="btn" onclick="togglePanel()">⚠️ Gaps</button>
   <button class="btn" onclick="fitView()">⊡ Fit</button>
-  <button class="btn" onclick="saveAsHTML()" title="Download an editable copy with all current changes baked in">💾 Save copy</button>
+  <div class="tsep"></div>
+  <button class="btn" onclick="saveAsHTML()" title="Download a fully editable copy of the current state">💾 Download</button>
+  <button class="btn" onclick="openGitHubModal()" title="Commit changes directly to your GitHub Pages repo">☁️ Save to GitHub</button>
   <button class="btn" onclick="printFull()" title="Print the full flowchart across multiple pages">🖨 Print all</button>
+  <div class="tsep"></div>
+  <span class="save-status idle" id="saveStatus">● local saved</span>
   <span class="mpill" id="mpill">✥ Drag mode</span>
   <span class="tip">Dbl-click node/group to edit · Click any arrow to edit/delete</span>
 </div>
@@ -255,6 +291,39 @@ header p{font-size:9px;color:#7da8d4;margin-top:1px}
       <div class="iss note"><div class="it">Note — Opportunity Tracking</div>No single source of truth for which opportunities are currently open, their deadlines, and capacity limits.</div>
     </div>
     <button class="addi" onclick="addIssue()">＋ Add Gap / Risk / Note</button>
+  </div>
+</div>
+
+<!-- ── GITHUB COMMIT MODAL ── -->
+<div class="modal-backdrop" id="ghModal">
+  <div class="modal">
+    <h2>☁️ Save to GitHub Pages</h2>
+    <p>Commits your current changes directly to your GitHub repo. The page will update live within ~60 seconds. Your token is stored only in this browser.</p>
+
+    <label>GitHub Personal Access Token</label>
+    <input type="password" id="ghToken" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx" autocomplete="off">
+    <div class="modal-hint">Needs <strong>repo</strong> scope. <a href="https://github.com/settings/tokens/new?scopes=repo&description=LifeX+Process+Map" target="_blank">Create one here ↗</a> — it's saved in your browser so you only do this once.</div>
+
+    <label>GitHub Username</label>
+    <input type="text" id="ghUser" placeholder="your-github-username">
+
+    <label>Repository Name</label>
+    <input type="text" id="ghRepo" placeholder="lifex-process-map">
+
+    <label>File path in repo</label>
+    <input type="text" id="ghPath" placeholder="index.html">
+    <div class="modal-hint">Usually <code>index.html</code>. If your file is in a subfolder use e.g. <code>docs/index.html</code>.</div>
+
+    <label>Branch</label>
+    <input type="text" id="ghBranch" placeholder="main">
+
+    <hr class="modal-divider">
+    <div id="ghStatus" class="modal-status"></div>
+
+    <div class="modal-actions">
+      <button class="modal-btn primary" id="ghCommitBtn" onclick="commitToGitHub()">Commit changes</button>
+      <button class="modal-btn secondary" onclick="closeGitHubModal()">Cancel</button>
+    </div>
   </div>
 </div>
 
@@ -684,6 +753,8 @@ function renderNodes(){
     el.style.left=(n.x+pan.x)+'px';el.style.top=(n.y+pan.y)+'px';
   });
   nl.className='nl'+(mode==='connect'?' cm-on':'');
+  // auto-save after every render
+  if(typeof scheduleLocalSave==='function') scheduleLocalSave();
 }
 
 // ══════════════════════════════════════════════
@@ -1045,10 +1116,187 @@ window.addEventListener('load',function(){
 }
 
 // ══════════════════════════════════════════════
+// PERSISTENCE — localStorage auto-save
+// Saves the full state on every render.
+// Restores automatically when the page loads.
+// ══════════════════════════════════════════════
+const LS_KEY = 'lifex_process_map_state';
+let saveTimer = null;
+
+function getState(){
+  return {nodes, edges, groups, NID, EID, GID, pan};
+}
+
+function applyState(s){
+  if(!s) return;
+  if(s.nodes)  nodes  = s.nodes;
+  if(s.edges)  edges  = s.edges;
+  if(s.groups) groups = s.groups;
+  if(s.NID)    NID    = s.NID;
+  if(s.EID)    EID    = s.EID;
+  if(s.GID)    GID    = s.GID;
+  if(s.pan)    pan    = s.pan;
+}
+
+function saveLocal(){
+  try {
+    localStorage.setItem(LS_KEY, JSON.stringify(getState()));
+    setSaveStatus('saved', '● local saved');
+  } catch(e) {
+    setSaveStatus('unsaved', '● save failed');
+  }
+}
+
+function loadLocal(){
+  try {
+    const raw = localStorage.getItem(LS_KEY);
+    if(!raw) return false;
+    applyState(JSON.parse(raw));
+    return true;
+  } catch(e) { return false; }
+}
+
+function setSaveStatus(cls, text){
+  const el = document.getElementById('saveStatus');
+  el.className = 'save-status ' + cls;
+  el.textContent = text;
+}
+
+function scheduleLocalSave(){
+  setSaveStatus('saving', '● saving…');
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(saveLocal, 800);
+}
+
+// ══════════════════════════════════════════════
+// GITHUB COMMIT
+// ══════════════════════════════════════════════
+const GH_SETTINGS_KEY = 'lifex_gh_settings';
+
+function openGitHubModal(){
+  // Restore saved settings
+  try {
+    const s = JSON.parse(localStorage.getItem(GH_SETTINGS_KEY)||'{}');
+    if(s.token) document.getElementById('ghToken').value  = s.token;
+    if(s.user)  document.getElementById('ghUser').value   = s.user;
+    if(s.repo)  document.getElementById('ghRepo').value   = s.repo;
+    if(s.path)  document.getElementById('ghPath').value   = s.path  || 'index.html';
+    if(s.branch)document.getElementById('ghBranch').value = s.branch || 'main';
+  } catch(e){}
+  document.getElementById('ghStatus').className = 'modal-status';
+  document.getElementById('ghStatus').textContent = '';
+  document.getElementById('ghModal').classList.add('vis');
+}
+
+function closeGitHubModal(){
+  document.getElementById('ghModal').classList.remove('vis');
+}
+// Close on backdrop click
+document.getElementById('ghModal').addEventListener('click', function(ev){
+  if(ev.target === this) closeGitHubModal();
+});
+
+async function commitToGitHub(){
+  const token  = document.getElementById('ghToken').value.trim();
+  const user   = document.getElementById('ghUser').value.trim();
+  const repo   = document.getElementById('ghRepo').value.trim();
+  const path   = document.getElementById('ghPath').value.trim() || 'index.html';
+  const branch = document.getElementById('ghBranch').value.trim() || 'main';
+
+  if(!token || !user || !repo){
+    setGhStatus('err', '⚠ Please fill in token, username, and repository name.');
+    return;
+  }
+
+  // Persist settings (token included — stored locally only)
+  localStorage.setItem(GH_SETTINGS_KEY, JSON.stringify({token,user,repo,path,branch}));
+
+  const btn = document.getElementById('ghCommitBtn');
+  btn.disabled = true;
+  setGhStatus('pending', '⏳ Building file…');
+
+  // Build the updated HTML source (same logic as saveAsHTML)
+  let src = document.documentElement.outerHTML;
+  function replaceBetween(s, start, end, newContent){
+    const si=s.indexOf(start), ei=s.indexOf(end);
+    if(si===-1||ei===-1) return s;
+    return s.slice(0,si+start.length)+newContent+s.slice(ei);
+  }
+  src = replaceBetween(src,'/*GROUPS_START*/','/*GROUPS_END*/', JSON.stringify(groups));
+  src = replaceBetween(src,'/*NODES_START*/', '/*NODES_END*/',  JSON.stringify(nodes));
+  src = replaceBetween(src,'/*EDGES_START*/', '/*EDGES_END*/',  JSON.stringify(edges));
+  src = src.replace(/\/\*NID\*\/\d+/,'/*NID*/'+NID);
+  src = src.replace(/\/\*EID\*\/\d+/,'/*EID*/'+EID);
+  src = src.replace(/\/\*GID\*\/\d+/,'/*GID*/'+GID);
+
+  // Base64 encode
+  const b64 = btoa(unescape(encodeURIComponent(src)));
+  const apiBase = `https://api.github.com/repos/${user}/${repo}/contents/${path}`;
+  const headers = {
+    'Authorization': 'token ' + token,
+    'Accept': 'application/vnd.github+json',
+    'Content-Type': 'application/json'
+  };
+
+  try {
+    // Step 1: get current file SHA (needed for update)
+    setGhStatus('pending', '⏳ Fetching current file SHA…');
+    let sha = null;
+    const getResp = await fetch(`${apiBase}?ref=${branch}`, {headers});
+    if(getResp.ok){
+      const data = await getResp.json();
+      sha = data.sha;
+    } else if(getResp.status !== 404){
+      const err = await getResp.json();
+      throw new Error(err.message || 'Failed to fetch file info');
+    }
+
+    // Step 2: commit
+    setGhStatus('pending', '⏳ Committing to GitHub…');
+    const now = new Date().toLocaleString('en-US',{dateStyle:'short',timeStyle:'short'});
+    const body = {
+      message: `Update process map — ${now}`,
+      content: b64,
+      branch
+    };
+    if(sha) body.sha = sha;
+
+    const putResp = await fetch(apiBase, {
+      method: 'PUT',
+      headers,
+      body: JSON.stringify(body)
+    });
+
+    if(!putResp.ok){
+      const err = await putResp.json();
+      throw new Error(err.message || `HTTP ${putResp.status}`);
+    }
+
+    setGhStatus('ok', '✓ Committed! GitHub Pages will update in ~60 seconds.');
+    setSaveStatus('saved', '● GitHub saved');
+
+  } catch(e) {
+    setGhStatus('err', '✗ Error: ' + e.message);
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+function setGhStatus(cls, msg){
+  const el = document.getElementById('ghStatus');
+  el.className = 'modal-status ' + cls;
+  el.textContent = msg;
+}
+
+// ══════════════════════════════════════════════
 // INIT
 // ══════════════════════════════════════════════
+// Try to restore from localStorage first.
+// If nothing saved yet, use the hardcoded data above.
+const restored = loadLocal();
 render();
-fitView();
+if(!restored) fitView();
+setSaveStatus('saved', '● local saved');
 </script>
 </body>
 </html>
