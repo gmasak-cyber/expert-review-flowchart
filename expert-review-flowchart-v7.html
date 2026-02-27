@@ -1,0 +1,899 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Expert Application & Review — Process Map v7</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Mono:wght@400;500&family=Epilogue:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#eceae4;
+  --sh:0 2px 8px rgba(0,0,0,.12),0 1px 3px rgba(0,0,0,.08);
+  --sh-drag:0 12px 32px rgba(0,0,0,.22);
+  --auto-bg:#e0f2fe;--auto-bd:#38bdf8;--auto-tx:#0369a1;
+  --manual-bg:#fef9c3;--manual-bd:#facc15;--manual-tx:#854d0e;
+  --cond-bg:#fef3c7;--cond-bd:#f59e0b;--cond-tx:#92400e;
+  --sys-bg:#f3e8ff;--sys-bd:#a855f7;--sys-tx:#6b21a8;
+}
+body{font-family:'Epilogue',sans-serif;background:var(--bg);overflow:hidden;height:100vh;display:flex;flex-direction:column}
+
+header{background:#0f1f38;color:#fff;padding:9px 14px;display:flex;align-items:center;gap:10px;border-bottom:3px solid #2563eb;flex-shrink:0}
+header h1{font-family:'DM Serif Display',serif;font-size:14.5px}
+header p{font-size:9px;color:#7da8d4;margin-top:1px}
+.hleg{margin-left:auto;display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.hl{display:flex;align-items:center;gap:3px;font-size:8px;font-family:'DM Mono',monospace;color:#b0c8e0;white-space:nowrap}
+.hld{width:7px;height:7px;border-radius:1px;flex-shrink:0}
+
+.tb{background:#fff;border-bottom:1px solid #ddd;padding:4px 10px;display:flex;gap:4px;align-items:center;flex-shrink:0;box-shadow:0 2px 4px rgba(0,0,0,.05);flex-wrap:wrap}
+.btn{padding:3px 8px;border-radius:4px;border:1px solid #d0ccc8;background:#fff;font-family:'Epilogue',sans-serif;font-size:9.5px;cursor:pointer;color:#333;transition:all .15s;user-select:none;white-space:nowrap}
+.btn:hover{background:var(--bg)}
+.btn.on{background:#0f1f38;color:#fff;border-color:#0f1f38}
+.btn.red{border-color:#fca5a5;color:#dc2626}
+.btn.red:hover{background:#fee2e2}
+.tsep{width:1px;height:14px;background:#e0ddd8;margin:0 1px;flex-shrink:0}
+.mpill{font-size:8.5px;font-family:'DM Mono',monospace;padding:2px 7px;border-radius:20px;border:1px solid #e0ddd8;color:#888;background:var(--bg);white-space:nowrap}
+.mpill.act{background:#fef3c7;color:#92400e;border-color:#fcd34d}
+.sws{display:flex;gap:2px;align-items:center}
+.sw{width:12px;height:12px;border-radius:2px;cursor:pointer;border:2px solid transparent;transition:all .12s;flex-shrink:0}
+.sw:hover,.sw.on{border-color:#333;transform:scale(1.2)}
+.tip{font-size:8.5px;color:#bbb;font-style:italic;margin-left:auto;white-space:nowrap}
+.wtl{display:inline-flex;align-items:center;gap:2px;font-size:7.5px;font-family:'DM Mono',monospace;padding:1px 5px;border-radius:3px;white-space:nowrap}
+
+.cw{flex:1;overflow:hidden;position:relative;cursor:default}
+#sv{position:absolute;top:0;left:0;width:100%;height:100%}
+.nl{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none}
+
+/* ── NODES ── */
+.fcn{position:absolute;background:#fff;border-radius:8px;padding:0;box-shadow:var(--sh);border:1.5px solid #ddd;cursor:grab;pointer-events:all;user-select:none;min-width:148px;max-width:215px;transition:box-shadow .15s;overflow:hidden}
+.fcn:hover{box-shadow:0 4px 16px rgba(0,0,0,.18)}
+.fcn.dragging{cursor:grabbing;box-shadow:var(--sh-drag);z-index:1000;opacity:.93}
+.fcn.sn{outline:2.5px solid #2563eb;outline-offset:2px}
+.fcn.srn{outline:2.5px solid #f59e0b;outline-offset:2px}
+.fcn.tgn{outline:2.5px solid #16a34a;outline-offset:2px}
+.fcn.c-entry{background:#dbeafe;border-color:#93c5fd}
+.fcn.c-triage{background:#fef3c7;border-color:#fcd34d}
+.fcn.c-priority{background:#fee2e2;border-color:#fca5a5}
+.fcn.c-decision{background:#dcfce7;border-color:#86efac}
+.fcn.c-diamond{background:#fffbeb;border-color:#fbbf24}
+.fcn.c-merge{background:#f5f3ff;border-color:#a5b4fc}
+.fcn.c-nomatch{background:#fef2f2;border-color:#f87171}
+.fcn.c-matchinfo{background:#f0fdf4;border-color:#4ade80}
+.fcn.c-matchno{background:#fffbeb;border-color:#fbbf24}
+.fcn.c-note{background:#f0f9ff;border-color:#7dd3fc}
+.fcn.c-internal{background:#fdf4ff;border-color:#d8b4fe}
+
+.nhead{padding:6px 11px 4px;display:flex;flex-direction:column;gap:2px}
+.ntag{font-family:'DM Mono',monospace;font-size:6.5px;letter-spacing:1px;text-transform:uppercase;font-weight:500;opacity:.5}
+.ntitle{font-size:10.5px;font-weight:600;color:#1a1a2e;line-height:1.3;word-break:break-word}
+.nmeta{font-size:8px;color:#777;margin-top:2px;font-family:'DM Mono',monospace;line-height:1.4;word-break:break-word;white-space:pre-line}
+.nfoot{padding:3px 9px 4px;display:flex;align-items:center;gap:4px;border-top:1px solid rgba(0,0,0,.07);background:rgba(255,255,255,.5);flex-wrap:wrap}
+.wtype{display:inline-flex;align-items:center;gap:2px;font-size:6.5px;font-family:'DM Mono',monospace;letter-spacing:.5px;text-transform:uppercase;font-weight:600;padding:1px 4px;border-radius:3px;white-space:nowrap}
+.wtype.auto   {background:var(--auto-bg);color:var(--auto-tx);border:1px solid var(--auto-bd)}
+.wtype.manual {background:var(--manual-bg);color:var(--manual-tx);border:1px solid var(--manual-bd)}
+.wtype.cond   {background:var(--cond-bg);color:var(--cond-tx);border:1px solid var(--cond-bd)}
+.wtype.system {background:var(--sys-bg);color:var(--sys-tx);border:1px solid var(--sys-bd)}
+.wtype.expert {background:#ecfdf5;color:#065f46;border:1px solid #6ee7b7}
+.owner-pill{display:inline-flex;align-items:center;gap:2px;font-size:6.5px;font-family:'DM Mono',monospace;padding:1px 4px;border-radius:10px;background:#f1f5f9;color:#475569;border:1px solid #e2e8f0;white-space:nowrap}
+.owner-dot{width:5px;height:5px;border-radius:50%;flex-shrink:0}
+.gbadge{position:absolute;top:-7px;right:-7px;background:#dc2626;color:#fff;width:15px;height:15px;border-radius:50%;font-size:8px;font-weight:700;display:flex;align-items:center;justify-content:center;border:1.5px solid #fff;z-index:5}
+
+.ports{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none}
+.port{position:absolute;width:10px;height:10px;border-radius:50%;background:#2563eb;border:2px solid #fff;cursor:crosshair;pointer-events:all;opacity:0;transition:opacity .15s;z-index:10}
+.port.pt{top:-5px;left:calc(50% - 5px)}
+.port.pb{bottom:-5px;left:calc(50% - 5px)}
+.port.pl{left:-5px;top:calc(50% - 5px)}
+.port.pr{right:-5px;top:calc(50% - 5px)}
+.fcn:hover .port,.cm-on .port{opacity:1}
+
+/* ── POPUPS ── */
+.pop{position:absolute;background:#fff;border-radius:9px;box-shadow:0 8px 32px rgba(0,0,0,.2);border:1px solid #e0ddd8;padding:11px 13px;z-index:800;display:none}
+.pop.vis{display:block}
+.pop label{font-size:8px;font-family:'DM Mono',monospace;color:#888;display:block;margin-bottom:2px;margin-top:7px}
+.pop label:first-of-type{margin-top:0}
+.pop input,.pop textarea,.pop select{width:100%;border:1px solid #ddd;border-radius:4px;padding:3px 6px;font-family:'Epilogue',sans-serif;font-size:11px;color:#1a1a2e;resize:none}
+.pop textarea{min-height:38px}
+.pa{display:flex;gap:4px;margin-top:8px}
+.pb{flex:1;padding:4px;border-radius:4px;border:1px solid #ddd;font-size:9.5px;cursor:pointer;font-family:'Epilogue',sans-serif}
+.pb.sv{background:#0f1f38;color:#fff;border-color:#0f1f38}
+.pb.dl{background:#fee2e2;color:#dc2626;border-color:#fca5a5}
+
+/* ── PANEL ── */
+.panel{position:absolute;right:0;top:0;bottom:0;width:255px;background:#fff;border-left:1px solid #e2ddd8;box-shadow:-4px 0 20px rgba(0,0,0,.1);transform:translateX(100%);transition:transform .25s;z-index:300;display:flex;flex-direction:column}
+.panel.open{transform:translateX(0)}
+.ph{background:#0f1f38;color:#fff;padding:11px 11px 8px;flex-shrink:0;position:relative}
+.ph h2{font-family:'DM Serif Display',serif;font-size:13px}
+.ph p{font-size:8px;color:#7da8d4;margin-top:2px}
+.xb{position:absolute;top:9px;right:9px;background:none;border:none;color:#7da8d4;font-size:15px;cursor:pointer}
+.pbody{flex:1;overflow-y:auto;padding:8px 10px}
+.iss{border-radius:5px;padding:7px 9px;margin-bottom:6px;border-left:3px solid;font-size:9.5px;line-height:1.5}
+.iss.gap{background:#fff5f5;border-color:#dc2626}
+.iss.risk{background:#fffbeb;border-color:#d97706}
+.iss.note{background:#eff6ff;border-color:#2563eb}
+.it{font-family:'DM Mono',monospace;font-size:7px;letter-spacing:1px;text-transform:uppercase;font-weight:600;margin-bottom:2px}
+.iss.gap .it{color:#dc2626}.iss.risk .it{color:#d97706}.iss.note .it{color:#2563eb}
+.addi{margin:6px 10px 10px;padding:6px;border:1.5px dashed #ccc;border-radius:5px;background:none;font-family:'Epilogue',sans-serif;font-size:9.5px;color:#888;cursor:pointer;width:calc(100% - 20px)}
+.addi:hover{background:#f8f8f8}
+.sll{font-family:'DM Mono',monospace;font-size:8.5px;font-weight:500;writing-mode:vertical-rl;transform:rotate(180deg);cursor:pointer;letter-spacing:.5px;opacity:.65;white-space:nowrap;display:flex;align-items:center;justify-content:center;height:100%}
+.sll:hover{opacity:1}
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>Expert Application & Review — LifeX Global</h1>
+    <p>Interactive Process Map · Ownership · Work Type · Internal Tracking</p>
+  </div>
+  <div class="hleg">
+    <div class="hl"><div class="hld" style="background:#93c5fd"></div>Entry/Intake</div>
+    <div class="hl"><div class="hld" style="background:#fcd34d"></div>Triage</div>
+    <div class="hl"><div class="hld" style="background:#fca5a5"></div>Priority</div>
+    <div class="hl"><div class="hld" style="background:#86efac"></div>Decision</div>
+    <div class="hl"><div class="hld" style="background:#d8b4fe"></div>Internal Ops</div>
+    <div class="hl"><div class="hld" style="background:#f87171"></div>No Match</div>
+    <div class="hl"><div class="hld" style="background:#4ade80"></div>Match+Info</div>
+    <div class="hl"><div class="hld" style="background:#dc2626;border-radius:50%"></div>Gap</div>
+  </div>
+</header>
+
+<div class="tb">
+  <button class="btn on" id="dragBtn" onclick="setMode('drag')">✥ Move</button>
+  <button class="btn"    id="connBtn" onclick="setMode('connect')">🔗 Connect</button>
+  <div class="tsep"></div>
+  <button class="btn" onclick="addNode()">＋ Node</button>
+  <button class="btn" onclick="addGroup()">＋ Group</button>
+  <button class="btn red" id="delBtn" style="display:none" onclick="deleteSelected()">🗑 Delete</button>
+  <div class="tsep"></div>
+  <span style="font-size:8px;color:#999;font-family:'DM Mono',monospace">Color:</span>
+  <div class="sws" id="sws">
+    <div class="sw" style="background:#dbeafe"                      data-c="c-entry"    title="Entry/Intake"></div>
+    <div class="sw" style="background:#fef3c7"                      data-c="c-triage"   title="Triage"></div>
+    <div class="sw" style="background:#fee2e2"                      data-c="c-priority" title="Prioritization"></div>
+    <div class="sw" style="background:#dcfce7"                      data-c="c-decision" title="Decision"></div>
+    <div class="sw" style="background:#fdf4ff"                      data-c="c-internal" title="Internal Ops"></div>
+    <div class="sw" style="background:#fef2f2"                      data-c="c-nomatch"  title="No Match"></div>
+    <div class="sw" style="background:#f0fdf4"                      data-c="c-matchinfo"title="Match+Info"></div>
+    <div class="sw" style="background:#fffbeb"                      data-c="c-matchno"  title="Match,No Info"></div>
+    <div class="sw" style="background:#f0f9ff"                      data-c="c-note"     title="Note"></div>
+    <div class="sw" style="background:#f5f3ff"                      data-c="c-merge"    title="Merge/Action"></div>
+    <div class="sw" style="background:#fffbeb;border:1px solid #fbbf24" data-c="c-diamond" title="Decision Diamond"></div>
+    <div class="sw" style="background:#fff;border:1px solid #ccc"   data-c=""           title="Default"></div>
+  </div>
+  <div class="tsep"></div>
+  <span class="wtl wtype auto" style="font-size:7.5px">⚡ Auto</span>
+  <span class="wtl wtype manual" style="font-size:7.5px">✍ Manual</span>
+  <span class="wtl wtype cond" style="font-size:7.5px">◈ Conditional</span>
+  <span class="wtl wtype system" style="font-size:7.5px">⬡ System</span>
+  <span class="wtl wtype expert" style="font-size:7.5px">👤 Expert</span>
+  <div class="tsep"></div>
+  <button class="btn" onclick="togglePanel()">⚠️ Gaps</button>
+  <button class="btn" onclick="fitView()">⊡ Fit</button>
+  <button class="btn" onclick="window.print()">🖨 Print</button>
+  <span class="mpill" id="mpill">✥ Drag mode</span>
+  <span class="tip">Dbl-click node/group to edit · Click any arrow to edit/delete</span>
+</div>
+
+<div class="cw" id="cw">
+  <svg id="sv" xmlns="http://www.w3.org/2000/svg"></svg>
+  <div class="nl" id="nl"></div>
+
+  <!-- Node popup -->
+  <div class="pop" id="nPop" style="min-width:245px">
+    <label>Title</label><input id="pTit" type="text">
+    <label>Notes / sub-label</label><textarea id="pMet"></textarea>
+    <label>Phase tag</label><input id="pTag" type="text">
+    <label>Work type</label>
+    <select id="pWt">
+      <option value="">— none —</option>
+      <option value="auto">⚡ Automated</option>
+      <option value="manual">✍ Manual</option>
+      <option value="cond">◈ Conditional</option>
+      <option value="system">⬡ System / Platform</option>
+      <option value="expert">👤 Expert Action</option>
+    </select>
+    <label>Owner(s) — comma-separated</label>
+    <input id="pOwn" type="text" placeholder="e.g. Megan, Program Lead">
+    <label>Applies to opportunities</label>
+    <input id="pOpp" type="text" placeholder="e.g. All, Connect, Launchpad">
+    <label>Gap badge</label>
+    <select id="pGap"><option value="">None</option><option value="1">Show gap badge !</option></select>
+    <div class="pa">
+      <button class="pb sv" onclick="saveNode()">Save</button>
+      <button class="pb dl" onclick="deleteNode()">Delete</button>
+      <button class="pb"    onclick="closePops()">Cancel</button>
+    </div>
+  </div>
+
+  <!-- Group popup -->
+  <div class="pop" id="gPop" style="min-width:205px">
+    <label>Group label</label><input id="gLbl" type="text">
+    <label>Theme</label>
+    <select id="gCol">
+      <option value="#1d4e89|#dbeafe|#93c5fd">Blue — Entry / Intake</option>
+      <option value="#5b21b6|#fdf4ff|#d8b4fe">Purple — Internal Ops</option>
+      <option value="#92400e|#fef3c7|#fcd34d">Amber — Triage</option>
+      <option value="#7c2d12|#fee2e2|#fca5a5">Rose — Prioritization</option>
+      <option value="#14532d|#dcfce7|#86efac">Green — Decision</option>
+      <option value="#374151|#f3f4f6|#d1d5db">Grey — Neutral</option>
+    </select>
+    <div class="pa">
+      <button class="pb sv" onclick="saveGroup()">Save</button>
+      <button class="pb dl" onclick="deleteGroup()">Delete Group</button>
+      <button class="pb"    onclick="closePops()">Cancel</button>
+    </div>
+  </div>
+
+  <!-- Edge popup -->
+  <div class="pop" id="ePop" style="min-width:175px">
+    <label>Edge label</label>
+    <input id="eLbl" type="text" placeholder="Yes / No / sometimes …">
+    <div class="pa">
+      <button class="pb sv" onclick="saveEdge()">Save</button>
+      <button class="pb dl" onclick="deleteEdge()">Delete Edge</button>
+      <button class="pb"    onclick="closePops()">Cancel</button>
+    </div>
+  </div>
+
+  <!-- Gaps panel -->
+  <div class="panel" id="panel">
+    <div class="ph">
+      <button class="xb" onclick="togglePanel()">×</button>
+      <h2>Gaps & Issues Log</h2>
+      <p>Click entries to edit · Add below</p>
+    </div>
+    <div class="pbody" id="pbody">
+      <div class="iss gap"><div class="it">Gap — Data Sync (E2)</div>Monday auto-transfer captures partial Jotform data — full application must be opened manually each time. Owner: Megan.</div>
+      <div class="iss gap"><div class="it">Gap — Manual Workaround (F2)</div>Opening Jotform for full details is a required workaround per applicant. Doesn't scale with volume.</div>
+      <div class="iss risk"><div class="it">Risk — Inconsistent Comms (E3)</div>Expert review-timeframe email sent "sometimes" — no standard trigger, template, or owner assignment.</div>
+      <div class="iss gap"><div class="it">Gap — Record Hygiene</div>Disposition notes to application board only. Contacts board never updated — relationship history stays incomplete.</div>
+      <div class="iss risk"><div class="it">Risk — No Automated Gate (F4)</div>Startup Supporter Intake completion checked manually mid-triage. Earlier automated check would reduce wasted effort.</div>
+      <div class="iss risk"><div class="it">Risk — No Link Tracking (B2)</div>Direct-send Jotform links have no open/click tracking.</div>
+      <div class="iss note"><div class="it">Note — Priority Logic SOP</div>Prioritization framework (Launchpad → Connect → Accel Mentorship → Accel Session Guests) not in a shared SOP.</div>
+      <div class="iss note"><div class="it">Note — Accel Mentorship Timing</div>Finalization may depend on cohort confirmation. Communicate expected timelines to experts where possible.</div>
+      <div class="iss note"><div class="it">Note — Opportunity Tracking</div>No single source of truth for which opportunities are currently open, their deadlines, and capacity limits.</div>
+    </div>
+    <button class="addi" onclick="addIssue()">＋ Add Gap / Risk / Note</button>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════
+// LAYOUT CONSTANTS
+// Left column (main flow): x = 60 … 840  (width ~780)
+// Right column (internal ops): x = 900 … 1130 (width ~230)
+// Vertical span of both: y = 20 … ~3500
+// ══════════════════════════════════════════════
+const NS='http://www.w3.org/2000/svg';
+const cw=document.getElementById('cw');
+const sv=document.getElementById('sv');
+const nl=document.getElementById('nl');
+
+let mode='drag';
+let pan={x:30,y:30};
+let dragN=null,dragOff={x:0,y:0};
+let connSrc=null,drawPt=null;
+let isPan=false,panStart={x:0,y:0},spDown=false;
+let editNid=null,editGid=null,editEid=null;
+let selNode=null,selEdge=null;
+let NID=500,EID=500,GID=500;
+
+const ownerColors={
+  'Megan':'#3b82f6','Program Lead':'#8b5cf6','Team':'#64748b',
+  'Expert':'#10b981','System':'#a855f7','LifeX Team':'#f59e0b',
+  'Geneva':'#ec4899','PM':'#6366f1'
+};
+function ownerColor(name){
+  const k=Object.keys(ownerColors).find(k=>name.includes(k));
+  return k?ownerColors[k]:'#94a3b8';
+}
+
+// ══════════════════════════════════════════════
+// DATA — TWO-COLUMN LAYOUT
+// Left column: main process flow (x: 60–830)
+// Right column: internal ops sidebar (x: 890–1120)
+// ══════════════════════════════════════════════
+
+// LEFT column phase bands: x=60, w=790
+// RIGHT column internal ops band: x=890, w=240, full height y=20..3500
+const LX=60, LW=790;   // left column group band x/w
+const RX=890, RW=240;  // right column x/w
+
+let groups=[
+  // ── Left column: main flow phases ──
+  {id:'g1',label:'① Entry & Outreach Channels',    tx:'#1d4e89',bg:'#dbeafe',bd:'#93c5fd',x:LX,y:20,  w:LW,h:370},
+  {id:'g2',label:'② Application Intake',            tx:'#1d4e89',bg:'#dbeafe',bd:'#93c5fd',x:LX,y:430, w:LW,h:420},
+  {id:'g3',label:'③ Review Triage',                 tx:'#92400e',bg:'#fef3c7',bd:'#fcd34d',x:LX,y:900, w:LW,h:600},
+  {id:'g4',label:'④ Prioritization & Dependencies', tx:'#7c2d12',bg:'#fee2e2',bd:'#fca5a5',x:LX,y:1560,w:LW,h:660},
+  {id:'g5',label:'⑤ Decision & Follow-Up',          tx:'#14532d',bg:'#dcfce7',bd:'#86efac',x:LX,y:2280,w:LW,h:810},
+
+  // ── Right column: internal ops (single tall band alongside all phases) ──
+  {id:'g0',label:'⓪ Internal Opportunity Management',tx:'#5b21b6',bg:'#fdf4ff',bd:'#d8b4fe',x:RX,y:20,w:RW,h:3070},
+];
+
+// Node x positions
+// Left column nodes roughly centered in LX..LX+LW (center ~LX+LW/2 = 455)
+// Right column nodes in RX+30 .. RX+RW-30
+
+let nodes=[
+  // ════ LEFT: Phase 1 ════
+  {id:'A1',x:LX+30,  y:58,  title:'Previously Engaged Experts',
+   meta:'Input: Current network list',
+   tag:'Entry Point',color:'c-entry',gap:false,wt:'system',own:'System',opp:'All'},
+
+  {id:'A2',x:LX+290, y:58,  title:'New / Never-Engaged Experts',
+   meta:'Input: Recruitment or intro by LifeX team',
+   tag:'Entry Point',color:'c-entry',gap:false,wt:'manual',own:'Megan, LifeX Team',opp:'All'},
+
+  {id:'A3',x:LX+570, y:58,  title:'Peer Referrals',
+   meta:'Input: Forwarded link from existing expert',
+   tag:'Entry Point',color:'c-entry',gap:false,wt:'expert',own:'Expert',opp:'All'},
+
+  {id:'B1',x:LX+30,  y:200, title:'MailChimp Newsletter',
+   meta:'Output: Email blast with open opportunity links\nTriggered when opportunity is set to Open',
+   tag:'Channel',color:'c-entry',gap:false,wt:'auto',own:'System / Megan',opp:'Previously engaged'},
+
+  {id:'B2',x:LX+450, y:200, title:'Direct Send of Jotform Link(s)',
+   meta:'Output: Jotform URL(s) sent manually\n⚠ No open-tracking on sent links',
+   tag:'Channel',color:'c-entry',gap:true,wt:'manual',own:'Megan',opp:'New / referred'},
+
+  {id:'C1',x:LX+270, y:330, title:'Expert Clicks Link & Accesses Form',
+   meta:'All entry channels converge here',
+   tag:'Merge → Expert Action',color:'c-merge',gap:false,wt:'expert',own:'Expert',opp:'All'},
+
+  // ════ LEFT: Phase 2 ════
+  {id:'D1',x:LX+270, y:478, title:'Expert Fills Out Jotform(s)',
+   meta:'Startup Supporter Intake &/or opportunity-specific form(s)',
+   tag:'Form Submission',color:'c-entry',gap:true,wt:'expert',own:'Expert',opp:'All'},
+
+  {id:'E1',x:LX+30,  y:628, title:'Jotform Sends Auto-Email',
+   meta:'To: Expert + info@lifexglobal.com\nConfirms receipt of submission',
+   tag:'Auto-Notification',color:'c-entry',gap:false,wt:'auto',own:'System (Jotform)',opp:'All'},
+
+  {id:'E2',x:LX+490, y:628, title:'Monday.com Board Updated',
+   meta:'⚠ Partial sync — not all Jotform fields transfer',
+   tag:'Auto-Sync (Partial)',color:'c-entry',gap:true,wt:'auto',own:'System (Monday)',opp:'All'},
+
+  {id:'E3',x:LX+270, y:778, title:'Megan Emails Expert re: Review Timeframe',
+   meta:'⚠ Only happens "sometimes"\nNo standard trigger, template, or SOP',
+   tag:'Conditional Manual Step',color:'c-diamond',gap:true,wt:'cond',own:'Megan',opp:'All'},
+
+  // ════ LEFT: Phase 3 ════
+  {id:'F1',x:LX+280, y:950, title:'Check Monday.com for New Submissions',
+   meta:'Input: Submission list from auto-sync',
+   tag:'Triage · Step 1',color:'c-triage',gap:false,wt:'manual',own:'Megan',opp:'All'},
+
+  {id:'F2',x:LX+30,  y:1110,title:'Open Jotform for Full Application',
+   meta:'⚠ Required — Monday missing fields',
+   tag:'Step 2 · in tandem',color:'c-triage',gap:true,wt:'manual',own:'Megan',opp:'All'},
+
+  {id:'F3',x:LX+280, y:1110,title:'Cross-Reference Monday Contacts Board',
+   meta:'Check existing relationship history',
+   tag:'Step 3 · in tandem',color:'c-triage',gap:false,wt:'manual',own:'Megan',opp:'All'},
+
+  {id:'F4',x:LX+545, y:1110,title:'Check Startup Supporter Intake Completion',
+   meta:'Required for: Accel Mentor, Connect, Launchpad\n⚠ No automated gate',
+   tag:'Step 4 · in tandem',color:'c-triage',gap:true,wt:'manual',own:'Megan',opp:'Accel, Connect, LP'},
+
+  {id:'F5',x:LX+545, y:1290,title:'LinkedIn Review',
+   meta:'Optional — additional context if needed',
+   tag:'Step 5 · Optional',color:'c-diamond',gap:false,wt:'cond',own:'Megan',opp:'All'},
+
+  // ════ LEFT: Phase 4 ════
+  {id:'G1',x:LX+280, y:1608,title:'Identify Opportunities Expert Applied For',
+   meta:'Review all programs; note conflicts or dependencies',
+   tag:'Step 1',color:'c-priority',gap:false,wt:'manual',own:'Megan',opp:'All'},
+
+  {id:'G2',x:LX+280, y:1755,title:'Multiple Time-Intensive Opportunities?',
+   meta:'e.g. Connect + Launchpad simultaneously',
+   tag:'Decision A',color:'c-diamond',gap:true,wt:'manual',own:'Megan',opp:'Connect, Launchpad'},
+
+  {id:'G3',x:LX+30,  y:1905,title:'Wait-and-See Opportunity?',
+   meta:'e.g. Accel Mentorship, Connect (cohort-dependent)',
+   tag:'Decision B · if No',color:'c-diamond',gap:false,wt:'manual',own:'Megan',opp:'Accel, Connect'},
+
+  {id:'H2',x:LX+30,  y:2060,title:'Batch Decision Queue',
+   meta:'Hold on Monday · wait for sufficient applicant pool',
+   tag:'Queue · if Yes',color:'c-priority',gap:false,wt:'manual',own:'Megan',opp:'Accel, Connect'},
+
+  {id:'G4',x:LX+480, y:1820,title:'Prioritize by Best Fit & Biggest Need',
+   meta:'1 · Launchpad (most specialized)\n2 · Connect\n3 · Accel Mentorship\n4 · Accel Session Guests',
+   tag:'Prioritize · all paths',color:'c-priority',gap:true,wt:'manual',own:'Megan, Program Lead',opp:'All'},
+
+  // ════ LEFT: Phase 5 ════
+  {id:'H1',x:LX+280, y:2335,title:'Make Match / No-Match Decision',
+   meta:'Assess: fit, availability, info on file, capacity',
+   tag:'Decision Gate',color:'c-decision',gap:false,wt:'manual',own:'Megan, Program Lead',opp:'All'},
+
+  {id:'PA1',x:LX+20, y:2510,title:'No Match — Send Email',
+   meta:'• No current matching opportunity\n• Add to MailChimp list (if not already)\n• Will reach out when similar opportunities arise',
+   tag:'Path A · No Match',color:'c-nomatch',gap:false,wt:'manual',own:'Megan',opp:'All'},
+
+  {id:'PB1',x:LX+275,y:2510,title:'Match — No Startup Supporter Info on File',
+   meta:'• Request intro chat\n• Send Startup Supporter Intake Jotform\n• Collect background before proceeding',
+   tag:'Path B · Match, No Info',color:'c-matchno',gap:false,wt:'manual',own:'Megan',opp:'All'},
+
+  {id:'PC1',x:LX+560,y:2510,title:'Match — Info on File',
+   meta:'• Send opportunity details email\n• Include: program overview, commitment, next steps\n• Attach onboarding docs if available',
+   tag:'Path C · Match + Info',color:'c-matchinfo',gap:false,wt:'manual',own:'Megan',opp:'All'},
+
+  {id:'PN1',x:LX+560,y:2710,title:'Accel Mentorship: Cohort Timing Note',
+   meta:'Finalization depends on cohort confirmation.\nDo not commit expert until cohort is confirmed.',
+   tag:'Note · Accel Only',color:'c-note',gap:false,wt:'cond',own:'Megan, Program Lead',opp:'Accel'},
+
+  {id:'H4',x:LX+280, y:2910,title:'Update Monday Application Board',
+   meta:'Record: disposition, notes, outcome, date\n⚠ Contacts Board NOT updated — history incomplete',
+   tag:'Record Update · Final Step',color:'c-decision',gap:true,wt:'manual',own:'Megan',opp:'All'},
+
+  // ════ RIGHT COLUMN: Internal Ops nodes ════
+  // Vertically distributed to align with the phases they primarily touch
+  // Phase 1 / pre-launch zone (y ~ 50–250)
+  {id:'Z1',x:RX+15,  y:55,   title:'Create / Update Opportunity in Monday',
+   meta:'Define: name, type, capacity, key dates\nAdd Jotform link(s) for this opportunity',
+   tag:'Internal Ops · Setup',color:'c-internal',gap:false,wt:'manual',own:'Megan, Program Lead',opp:'All'},
+
+  {id:'Z2',x:RX+15,  y:215,  title:'Set Opportunity Status',
+   meta:'Open · Closed · Paused · Waitlist\nUpdate as cohort/program status changes',
+   tag:'Internal Ops',color:'c-internal',gap:false,wt:'manual',own:'Megan',opp:'All'},
+
+  {id:'Z3',x:RX+15,  y:375,  title:'Build / Update MailChimp Segment',
+   meta:'Tag contacts by opportunity interest\nSchedule newsletter when opportunity opens',
+   tag:'Internal Ops',color:'c-internal',gap:false,wt:'manual',own:'Megan',opp:'All'},
+
+  {id:'Z6',x:RX+15,  y:540,  title:'Jotform Setup / Update for Opportunity',
+   meta:'Create or clone opportunity-specific Jotform\nEnsure Monday sync fields are mapped correctly',
+   tag:'Internal Setup',color:'c-internal',gap:true,wt:'manual',own:'Megan',opp:'All'},
+
+  // Phase 3/4 zone — capacity & review decisions (y ~ 900–1700)
+  {id:'Z4',x:RX+15,  y:940,  title:'Confirm Cohort / Program Details',
+   meta:'Accel: confirm cohort dates before finalizing\nConnect/LP: confirm startup match first',
+   tag:'Internal · Prerequisite',color:'c-internal',gap:false,wt:'manual',own:'Program Lead, Geneva',opp:'Accel, Connect, LP'},
+
+  {id:'Z5',x:RX+15,  y:1130, title:'Opportunity Capacity Tracking',
+   meta:'Track: # experts needed vs. # confirmed\nUpdate Monday when slots fill or close',
+   tag:'Ongoing · Internal',color:'c-internal',gap:true,wt:'manual',own:'Megan',opp:'All'},
+
+  {id:'Z7',x:RX+15,  y:1330, title:'Internal Review / Decision Checkpoint',
+   meta:'Team alignment: who to prioritize, capacity, timeline\nFor Accel: confirm cohort before committing experts',
+   tag:'Internal · Recurring',color:'c-internal',gap:false,wt:'manual',own:'Megan, Program Lead, Geneva',opp:'Accel, Connect, LP'},
+
+  // Phase 5 zone — closing loop (y ~ 2500–2900)
+  {id:'Z8',x:RX+15,  y:2500, title:'Update Opportunity Status Post-Decision',
+   meta:'Mark slots as filled / closed when capacity reached\nTrigger waitlist outreach if needed',
+   tag:'Internal Ops · Post-Decision',color:'c-internal',gap:false,wt:'manual',own:'Megan',opp:'All'},
+
+  {id:'Z9',x:RX+15,  y:2680, title:'Update Contacts Board',
+   meta:'Add expert relationship notes, outcome, date\nCurrently not done — critical gap in record-keeping',
+   tag:'Internal Ops · Record',color:'c-internal',gap:true,wt:'manual',own:'Megan',opp:'All'},
+];
+
+let edges=[
+  // ── Internal ops internal connections ──
+  {id:'e0a',from:'Z1',to:'Z2',fp:'bottom',tp:'top',  label:''},
+  {id:'e0b',from:'Z2',to:'Z3',fp:'bottom',tp:'top',  label:'when Open'},
+  {id:'e0c',from:'Z1',to:'Z6',fp:'bottom',tp:'top',  label:''},
+  {id:'e0d',from:'Z4',to:'Z7',fp:'bottom',tp:'top',  label:'details confirmed'},
+  {id:'e0e',from:'Z5',to:'Z7',fp:'bottom',tp:'top',  label:'capacity status'},
+  {id:'e0f',from:'Z7',to:'Z8',fp:'bottom',tp:'top',  label:''},
+  {id:'e0g',from:'Z8',to:'Z9',fp:'bottom',tp:'top',  label:''},
+
+  // ── Right → Left: Internal ops trigger outreach ──
+  {id:'ri1',from:'Z3',to:'B1',fp:'left',  tp:'right', label:'newsletter triggered'},
+  {id:'ri2',from:'Z2',to:'B2',fp:'left',  tp:'right', label:'direct send enabled'},
+
+  // ── Left → Right: process feeds internal ops ──
+  // Submission triggers capacity tracking
+  {id:'lr1',from:'E2',to:'Z5',fp:'right', tp:'left',  label:'submission received'},
+  // Triage feeds into internal review
+  {id:'lr2',from:'F4',to:'Z7',fp:'right', tp:'left',  label:'flags for review'},
+  // Prioritization references cohort details
+  {id:'lr3',from:'G4',to:'Z4',fp:'right', tp:'left',  label:'check cohort status'},
+  // Decision outcome → update opportunity & contacts
+  {id:'lr4',from:'H4',to:'Z8',fp:'right', tp:'left',  label:'update capacity'},
+  {id:'lr5',from:'H4',to:'Z9',fp:'right', tp:'left',  label:'update contacts'},
+
+  // ── Left column: main flow ──
+  // Entry
+  {id:'e1', from:'A1',to:'B1',fp:'bottom',tp:'top',  label:'newsletter list'},
+  {id:'e2', from:'A2',to:'B2',fp:'bottom',tp:'top',  label:'direct link'},
+  {id:'e3', from:'A3',to:'B2',fp:'bottom',tp:'top',  label:'forwarded link'},
+  {id:'e4', from:'B1',to:'C1',fp:'bottom',tp:'top',  label:''},
+  {id:'e5', from:'B2',to:'C1',fp:'bottom',tp:'top',  label:''},
+  {id:'e6', from:'C1',to:'D1',fp:'bottom',tp:'top',  label:''},
+  // Intake
+  {id:'e7', from:'D1',to:'E1',fp:'bottom',tp:'top',  label:'auto-email'},
+  {id:'e8', from:'D1',to:'E2',fp:'bottom',tp:'top',  label:'auto-sync'},
+  {id:'e9', from:'E1',to:'E3',fp:'bottom',tp:'top',  label:'sometimes'},
+  {id:'e10',from:'E2',to:'F1',fp:'bottom',tp:'top',  label:''},
+  {id:'e11',from:'E3',to:'F1',fp:'bottom',tp:'top',  label:''},
+  // Triage
+  {id:'e12',from:'F1',to:'F2',fp:'bottom',tp:'top',  label:'in tandem'},
+  {id:'e13',from:'F1',to:'F3',fp:'bottom',tp:'top',  label:'in tandem'},
+  {id:'e14',from:'F1',to:'F4',fp:'bottom',tp:'top',  label:'in tandem'},
+  {id:'e15',from:'F4',to:'F5',fp:'bottom',tp:'top',  label:'if needed'},
+  {id:'e16',from:'F2',to:'G1',fp:'bottom',tp:'top',  label:''},
+  {id:'e17',from:'F3',to:'G1',fp:'bottom',tp:'top',  label:''},
+  {id:'e18',from:'F4',to:'G1',fp:'bottom',tp:'top',  label:''},
+  {id:'e19',from:'F5',to:'G1',fp:'bottom',tp:'top',  label:'if performed'},
+  // Prioritization
+  {id:'e20',from:'G1',to:'G2',fp:'bottom',tp:'top',  label:''},
+  {id:'e21',from:'G2',to:'G3',fp:'left',  tp:'top',  label:'No'},
+  {id:'e22',from:'G2',to:'G4',fp:'right', tp:'top',  label:'Yes → prioritize'},
+  {id:'e23',from:'G3',to:'H2',fp:'bottom',tp:'top',  label:'Yes → hold'},
+  {id:'e24',from:'G3',to:'H1',fp:'right', tp:'left', label:'No → decide'},
+  {id:'e25',from:'H2',to:'H1',fp:'bottom',tp:'left', label:'when pool ready'},
+  {id:'e26',from:'G4',to:'H1',fp:'bottom',tp:'top',  label:''},
+  // Decision paths
+  {id:'e27',from:'H1',to:'PA1',fp:'bottom',tp:'top', label:'No Match'},
+  {id:'e28',from:'H1',to:'PB1',fp:'bottom',tp:'top', label:'Match, No Info'},
+  {id:'e29',from:'H1',to:'PC1',fp:'bottom',tp:'top', label:'Match + Info'},
+  {id:'e30',from:'PC1',to:'PN1',fp:'bottom',tp:'top',label:'if Accel Mentorship'},
+  {id:'e31',from:'PA1',to:'H4',fp:'bottom',tp:'top', label:''},
+  {id:'e32',from:'PB1',to:'H4',fp:'bottom',tp:'top', label:''},
+  {id:'e33',from:'PC1',to:'H4',fp:'bottom',tp:'top', label:''},
+  {id:'e34',from:'PN1',to:'H4',fp:'bottom',tp:'top', label:''},
+];
+
+// ══════════════════════════════════════════════
+// HELPERS
+// ══════════════════════════════════════════════
+function mkel(t){return document.createElementNS(NS,t)}
+function sat(e,o){Object.entries(o).forEach(([k,v])=>e.setAttribute(k,v))}
+function nRect(id){
+  const n=nodes.find(x=>x.id===id);if(!n)return null;
+  const el=document.getElementById('nd-'+id);
+  return{x:n.x,y:n.y,w:el?el.offsetWidth:190,h:el?el.offsetHeight:80};
+}
+function portXY(id,port){
+  const r=nRect(id);if(!r)return null;
+  switch(port){
+    case'top':    return{x:r.x+r.w/2,y:r.y};
+    case'bottom': return{x:r.x+r.w/2,y:r.y+r.h};
+    case'left':   return{x:r.x,      y:r.y+r.h/2};
+    case'right':  return{x:r.x+r.w,  y:r.y+r.h/2};
+  }
+}
+function mkPath(x1,y1,x2,y2,fp,tp){
+  let c1x=x1,c1y=y1,c2x=x2,c2y=y2;
+  const hf=fp==='bottom'||fp==='top', vt=tp==='top'||tp==='bottom';
+  if(hf&&vt){const b=Math.max(Math.abs(y2-y1)*.42,38);c1y=fp==='bottom'?y1+b:y1-b;c1x=x1;c2y=tp==='top'?y2-b:y2+b;c2x=x2;}
+  else if(!hf&&!vt){const b=Math.max(Math.abs(x2-x1)*.42,38);c1x=fp==='right'?x1+b:x1-b;c1y=y1;c2x=tp==='left'?x2-b:x2+b;c2y=y2;}
+  else{if(hf){c1y=y2;c2x=x1;}else{c1x=x2;c2y=y1;}}
+  return`M${x1},${y1} C${c1x},${c1y} ${c2x},${c2y} ${x2},${y2}`;
+}
+
+// ══════════════════════════════════════════════
+// RENDER
+// ══════════════════════════════════════════════
+function render(){renderSvg();renderNodes()}
+
+function renderSvg(){
+  sv.innerHTML='';
+  // defs
+  const defs=mkel('defs');
+  [['arr','#64748b'],['arr-s','#2563eb'],['arr-d','#f59e0b'],['arr-int','#8b5cf6'],['arr-lr','#7c3aed']].forEach(([id,fill])=>{
+    const m=mkel('marker');sat(m,{id,markerWidth:'8',markerHeight:'8',refX:'6',refY:'3',orient:'auto'});
+    const p=mkel('path');sat(p,{d:'M0,0 L0,6 L7,3 z',fill});m.appendChild(p);defs.appendChild(m);
+  });
+  sv.appendChild(defs);
+
+  // groups
+  groups.forEach(g=>{
+    const[tx,bg,bd]=g.color?g.color.split('|'):[g.tx,g.bg,g.bd];
+    const r=mkel('rect');
+    sat(r,{x:g.x+pan.x,y:g.y+pan.y,width:g.w,height:g.h,rx:'11',fill:bg,stroke:bd,'stroke-width':'1.8','fill-opacity':'.48',cursor:'pointer'});
+    r.addEventListener('dblclick',ev=>{ev.stopPropagation();openGrp(g.id,ev)});
+    sv.appendChild(r);
+    const fh=Math.min(g.h-8,280);
+    const fo=mkel('foreignObject');sat(fo,{x:g.x+pan.x+4,y:g.y+pan.y+(g.h-fh)/2,width:'22',height:fh});
+    const d=document.createElementNS('http://www.w3.org/1999/xhtml','div');
+    d.className='sll';d.style.color=tx;d.textContent=g.label;
+    d.addEventListener('dblclick',ev=>{ev.stopPropagation();openGrp(g.id,ev)});
+    fo.appendChild(d);sv.appendChild(fo);
+  });
+
+  // edges
+  edges.forEach(e=>{
+    const p1=portXY(e.from,e.fp||'bottom');
+    const p2=portXY(e.to,  e.tp||'top');
+    if(!p1||!p2)return;
+    const isSel=selEdge===e.id;
+    // classify edge style
+    const isInternal=e.id.startsWith('e0');  // internal ops only
+    const isLR=e.id.startsWith('lr');         // left→right cross
+    const isRI=e.id.startsWith('ri');         // right→left cross
+    const isCross=isLR||isRI;
+    const dashed=isCross||e.label==='sometimes'||e.label.startsWith('if')||e.label.startsWith('when');
+    const stroke=isSel?'#2563eb':isInternal?'#8b5cf6':isCross?'#7c3aed':'#64748b';
+    const mend=isSel?'url(#arr-s)':isInternal?'url(#arr-int)':isCross?'url(#arr-lr)':'url(#arr)';
+    const opacity=isSel?'1':isCross?'.55':isInternal?'.55':'.45';
+
+    const d=mkPath(p1.x+pan.x,p1.y+pan.y,p2.x+pan.x,p2.y+pan.y,e.fp||'bottom',e.tp||'top');
+
+    const hit=mkel('path');sat(hit,{d,stroke:'transparent','stroke-width':'18',fill:'none',cursor:'pointer'});
+    hit.addEventListener('click',ev=>{ev.stopPropagation();clickEdge(e.id,ev)});
+    sv.appendChild(hit);
+
+    const path=mkel('path');
+    sat(path,{d,stroke,'stroke-width':isSel?'2.2':'1.5',fill:'none','stroke-opacity':opacity,
+      'stroke-dasharray':dashed?'5,4':'none','marker-end':mend,cursor:'pointer'});
+    path.addEventListener('click',ev=>{ev.stopPropagation();clickEdge(e.id,ev)});
+    sv.appendChild(path);
+
+    if(e.label){
+      const mx=(p1.x+pan.x+p2.x+pan.x)/2;
+      const my=(p1.y+pan.y+p2.y+pan.y)/2;
+      const tw=e.label.length*4.6+12;
+      const bgr=mkel('rect');
+      sat(bgr,{x:mx-tw/2,y:my-8,width:tw,height:13,rx:'6',fill:'white','fill-opacity':'.92',stroke:isSel?'#2563eb':isCross?'#7c3aed':'#ccc','stroke-width':'.8'});
+      sv.appendChild(bgr);
+      const t=mkel('text');
+      sat(t,{x:mx,y:my+1.5,'text-anchor':'middle','font-size':'8','font-family':'DM Mono,monospace',fill:isSel?'#2563eb':isCross?'#6d28d9':'#64748b','pointer-events':'none'});
+      t.textContent=e.label;sv.appendChild(t);
+    }
+  });
+
+  // live draw
+  if(drawPt&&connSrc){
+    const p1=portXY(connSrc.id,connSrc.port);
+    if(p1){const p=mkel('path');sat(p,{d:`M${p1.x+pan.x},${p1.y+pan.y} L${drawPt.x},${drawPt.y}`,stroke:'#f59e0b','stroke-width':'2',fill:'none','stroke-dasharray':'6,4','marker-end':'url(#arr-d)'});sv.appendChild(p);}
+  }
+}
+
+function renderNodes(){
+  const have=new Set(nodes.map(n=>'nd-'+n.id));
+  Array.from(nl.children).forEach(c=>{if(!have.has(c.id))c.remove()});
+  nodes.forEach(n=>{
+    let el=document.getElementById('nd-'+n.id);
+    if(!el){
+      el=document.createElement('div');el.id='nd-'+n.id;el.className='fcn';
+      el.innerHTML=`<div class="gbadge" style="display:none">!</div>
+        <div class="nhead"><div class="ntag"></div><div class="ntitle"></div><div class="nmeta"></div></div>
+        <div class="nfoot"></div>
+        <div class="ports">
+          <div class="port pt" data-p="top"></div><div class="port pb" data-p="bottom"></div>
+          <div class="port pl" data-p="left"></div><div class="port pr" data-p="right"></div>
+        </div>`;
+      nl.appendChild(el);
+      el.addEventListener('mousedown',onNMD);
+      el.addEventListener('dblclick',ev=>{ev.stopPropagation();openNode(n.id)});
+      el.querySelectorAll('.port').forEach(p=>{p.addEventListener('mousedown',ev=>{ev.stopPropagation();startConn(n.id,p.dataset.p,ev)})});
+    }
+    el.className='fcn'+(n.color?' '+n.color:'')+(selNode===n.id?' sn':'')+(connSrc&&connSrc.id===n.id?' srn':'');
+    el.querySelector('.ntag').textContent  =n.tag||'';
+    el.querySelector('.ntitle').textContent=n.title;
+    el.querySelector('.nmeta').textContent =n.meta||'';
+    el.querySelector('.gbadge').style.display=n.gap?'flex':'none';
+
+    const foot=el.querySelector('.nfoot');foot.innerHTML='';
+    if(n.wt){
+      const wl={auto:'⚡ Auto',manual:'✍ Manual',cond:'◈ Conditional',system:'⬡ System',expert:'👤 Expert'};
+      const ws=document.createElement('span');ws.className=`wtype ${n.wt}`;ws.textContent=wl[n.wt]||n.wt;foot.appendChild(ws);
+    }
+    if(n.own){n.own.split(',').map(s=>s.trim()).filter(Boolean).forEach(o=>{
+      const op=document.createElement('span');op.className='owner-pill';
+      const dot=document.createElement('span');dot.className='owner-dot';dot.style.background=ownerColor(o);
+      op.appendChild(dot);op.appendChild(document.createTextNode(o));foot.appendChild(op);
+    });}
+    if(n.opp&&n.opp!=='All'){
+      const os=document.createElement('span');
+      os.style.cssText='font-size:6.5px;font-family:"DM Mono",monospace;color:#94a3b8;white-space:nowrap;margin-left:auto';
+      os.textContent=n.opp;foot.appendChild(os);
+    }
+    el.style.left=(n.x+pan.x)+'px';el.style.top=(n.y+pan.y)+'px';
+  });
+  nl.className='nl'+(mode==='connect'?' cm-on':'');
+}
+
+// ══════════════════════════════════════════════
+// DRAG
+// ══════════════════════════════════════════════
+function onNMD(ev){
+  if(ev.button!==0||ev.target.classList.contains('port'))return;
+  if(mode==='connect')return;
+  const id=ev.currentTarget.id.replace('nd-','');
+  selectNode(id);
+  const n=nodes.find(x=>x.id===id);
+  const wr=cw.getBoundingClientRect();
+  dragN=id;dragOff={x:ev.clientX-wr.left-(n.x+pan.x),y:ev.clientY-wr.top-(n.y+pan.y)};
+  ev.currentTarget.classList.add('dragging');ev.preventDefault();
+}
+document.addEventListener('mousemove',ev=>{
+  const wr=cw.getBoundingClientRect();const cx=ev.clientX-wr.left,cy=ev.clientY-wr.top;
+  if(dragN){const n=nodes.find(x=>x.id===dragN);n.x=cx-dragOff.x-pan.x;n.y=cy-dragOff.y-pan.y;render();return;}
+  if(connSrc){
+    drawPt={x:cx,y:cy};
+    document.querySelectorAll('.fcn').forEach(e=>e.classList.remove('tgn'));
+    const ov=document.elementFromPoint(ev.clientX,ev.clientY);
+    if(ov){const ne=ov.closest('.fcn');if(ne&&ne.id!=='nd-'+connSrc.id)ne.classList.add('tgn');}
+    renderSvg();return;
+  }
+  if(isPan){pan.x+=ev.clientX-panStart.x;pan.y+=ev.clientY-panStart.y;panStart={x:ev.clientX,y:ev.clientY};render();}
+});
+document.addEventListener('mouseup',ev=>{
+  if(dragN){const el=document.getElementById('nd-'+dragN);if(el)el.classList.remove('dragging');dragN=null;return;}
+  if(connSrc){
+    document.querySelectorAll('.fcn').forEach(e=>e.classList.remove('tgn'));
+    const ov=document.elementFromPoint(ev.clientX,ev.clientY);
+    let toId=null,toPort='top';
+    if(ov){const pe=ov.classList.contains('port')?ov:null;const ne=ov.closest('.fcn');if(pe)toPort=pe.dataset.p;if(ne)toId=ne.id.replace('nd-','');}
+    if(toId&&toId!==connSrc.id)edges.push({id:'e'+(++EID),from:connSrc.id,to:toId,fp:connSrc.port,tp:toPort,label:''});
+    connSrc=null;drawPt=null;render();return;
+  }
+  if(isPan)isPan=false;
+});
+
+// ══════════════════════════════════════════════
+// PAN / KEYS
+// ══════════════════════════════════════════════
+document.addEventListener('keydown',ev=>{
+  if(ev.code==='Space'&&!ev.target.matches('input,textarea,select')){spDown=true;cw.style.cursor='grab';ev.preventDefault();}
+  if(ev.code==='Escape'){connSrc=null;drawPt=null;closePops();render();}
+  if((ev.code==='Delete'||ev.code==='Backspace')&&!ev.target.matches('input,textarea,select')){if(selNode)deleteNode();else if(selEdge)deleteEdge();}
+});
+document.addEventListener('keyup',ev=>{if(ev.code==='Space'){spDown=false;cw.style.cursor='default';}});
+sv.addEventListener('mousedown',ev=>{
+  if(ev.button===1||spDown){isPan=true;panStart={x:ev.clientX,y:ev.clientY};cw.style.cursor='grabbing';ev.preventDefault();}
+  else if(ev.button===0&&!ev.target.closest('[data-p]')){deselectAll();closePops();}
+});
+nl.addEventListener('mousedown',ev=>{if(ev.button===1||spDown){isPan=true;panStart={x:ev.clientX,y:ev.clientY};}});
+cw.addEventListener('wheel',ev=>{ev.preventDefault();pan.x-=ev.deltaX;pan.y-=ev.deltaY;render();},{passive:false});
+
+// ══════════════════════════════════════════════
+// CONNECT
+// ══════════════════════════════════════════════
+function startConn(id,port,ev){
+  connSrc={id,port};const wr=cw.getBoundingClientRect();
+  drawPt={x:ev.clientX-wr.left,y:ev.clientY-wr.top};
+}
+
+// ══════════════════════════════════════════════
+// MODE
+// ══════════════════════════════════════════════
+function setMode(m){
+  mode=m;connSrc=null;drawPt=null;
+  document.getElementById('dragBtn').classList.toggle('on',m==='drag');
+  document.getElementById('connBtn').classList.toggle('on',m==='connect');
+  const pill=document.getElementById('mpill');
+  pill.textContent=m==='drag'?'✥ Drag mode':'🔗 Connect — drag from port dots';
+  pill.className='mpill'+(m==='connect'?' act':'');
+  render();
+}
+
+// ══════════════════════════════════════════════
+// SELECTION
+// ══════════════════════════════════════════════
+function selectNode(id){selNode=id;selEdge=null;document.getElementById('delBtn').style.display=id?'inline-block':'none';render();}
+function deselectAll(){selNode=null;selEdge=null;document.getElementById('delBtn').style.display='none';render();}
+function clickEdge(id,ev){selEdge=id;selNode=null;document.getElementById('delBtn').style.display='none';render();openEdge(id,ev);}
+
+// ══════════════════════════════════════════════
+// NODE POPUP
+// ══════════════════════════════════════════════
+function openNode(id){
+  const n=nodes.find(x=>x.id===id);if(!n)return;
+  editNid=id;
+  document.getElementById('pTit').value=n.title;document.getElementById('pMet').value=n.meta||'';
+  document.getElementById('pTag').value=n.tag||'';document.getElementById('pWt').value=n.wt||'';
+  document.getElementById('pOwn').value=n.own||'';document.getElementById('pOpp').value=n.opp||'';
+  document.getElementById('pGap').value=n.gap?'1':'';
+  placePopup('nPop',id);document.getElementById('nPop').classList.add('vis');
+  document.getElementById('pTit').focus();
+}
+function saveNode(){
+  const n=nodes.find(x=>x.id===editNid);if(!n)return;
+  n.title=document.getElementById('pTit').value;n.meta=document.getElementById('pMet').value;
+  n.tag=document.getElementById('pTag').value;n.wt=document.getElementById('pWt').value;
+  n.own=document.getElementById('pOwn').value;n.opp=document.getElementById('pOpp').value;
+  n.gap=document.getElementById('pGap').value==='1';closePops();render();
+}
+function deleteNode(){
+  const id=editNid||selNode;if(!id)return;
+  nodes=nodes.filter(x=>x.id!==id);edges=edges.filter(x=>x.from!==id&&x.to!==id);
+  selNode=null;editNid=null;document.getElementById('delBtn').style.display='none';closePops();render();
+}
+
+// ══════════════════════════════════════════════
+// GROUP POPUP
+// ══════════════════════════════════════════════
+function openGrp(id,ev){
+  const g=groups.find(x=>x.id===id);if(!g)return;
+  editGid=id;document.getElementById('gLbl').value=g.label;
+  document.getElementById('gCol').value=`${g.tx}|${g.bg}|${g.bd}`;
+  placeXY('gPop',ev.clientX,ev.clientY);document.getElementById('gPop').classList.add('vis');
+  document.getElementById('gLbl').focus();
+}
+function saveGroup(){
+  const g=groups.find(x=>x.id===editGid);if(!g)return;
+  g.label=document.getElementById('gLbl').value;
+  const[tx,bg,bd]=document.getElementById('gCol').value.split('|');
+  g.tx=tx;g.bg=bg;g.bd=bd;closePops();render();
+}
+function deleteGroup(){groups=groups.filter(x=>x.id!==editGid);editGid=null;closePops();render();}
+
+// ══════════════════════════════════════════════
+// EDGE POPUP
+// ══════════════════════════════════════════════
+function openEdge(id,ev){
+  editEid=id;const e=edges.find(x=>x.id===id);
+  document.getElementById('eLbl').value=e?e.label||'':'';
+  placeXY('ePop',ev.clientX,ev.clientY);document.getElementById('ePop').classList.add('vis');
+  document.getElementById('eLbl').focus();
+}
+function saveEdge(){const e=edges.find(x=>x.id===editEid);if(e)e.label=document.getElementById('eLbl').value;closePops();render();}
+function deleteEdge(){
+  const id=editEid||selEdge;if(!id)return;
+  edges=edges.filter(x=>x.id!==id);selEdge=null;editEid=null;closePops();render();
+}
+
+// ══════════════════════════════════════════════
+// POPUP PLACEMENT
+// ══════════════════════════════════════════════
+function placePopup(popId,nodeId){
+  const el=document.getElementById('nd-'+nodeId);if(!el)return;
+  const wr=cw.getBoundingClientRect(),nr=el.getBoundingClientRect();
+  placeXY(popId,nr.right-wr.left+wr.left+6,nr.top-wr.top+wr.top);
+}
+function placeXY(popId,cx,cy){
+  const pop=document.getElementById(popId);const wr=cw.getBoundingClientRect();
+  let x=cx-wr.left+8,y=cy-wr.top+8;
+  const pw=pop.offsetWidth||250,ph=pop.offsetHeight||230;
+  if(x+pw>wr.width-8)x=wr.width-pw-8;if(y+ph>wr.height-8)y=wr.height-ph-8;
+  if(x<4)x=4;if(y<4)y=4;pop.style.left=x+'px';pop.style.top=y+'px';
+}
+function closePops(){
+  ['nPop','gPop','ePop'].forEach(id=>document.getElementById(id).classList.remove('vis'));
+  editNid=null;editGid=null;editEid=null;selEdge=null;render();
+}
+cw.addEventListener('click',ev=>{
+  if(!ev.target.closest('.pop')&&!ev.target.closest('.fcn')&&!ev.target.closest('.panel'))closePops();
+});
+
+// ══════════════════════════════════════════════
+// ADD NODE / GROUP
+// ══════════════════════════════════════════════
+function addNode(){
+  const wr=cw.getBoundingClientRect();const id='N'+(++NID);
+  nodes.push({id,x:wr.width/2-pan.x-90,y:wr.height/2-pan.y-35,title:'New Step',meta:'Double-click to edit',tag:'Step',color:'',gap:false,wt:'manual',own:'',opp:'All'});
+  render();setTimeout(()=>openNode(id),60);
+}
+function addGroup(){
+  const id='g'+(++GID);
+  groups.push({id,label:'New Group',tx:'#374151',bg:'#f3f4f6',bd:'#d1d5db',x:60-pan.x,y:60-pan.y,w:500,h:200});
+  render();
+}
+document.getElementById('sws').addEventListener('click',ev=>{
+  const sw=ev.target.closest('.sw');if(!sw||!selNode)return;
+  const n=nodes.find(x=>x.id===selNode);if(n){n.color=sw.dataset.c;render();}
+  document.querySelectorAll('.sw').forEach(s=>s.classList.remove('on'));sw.classList.add('on');
+});
+function deleteSelected(){if(selNode)deleteNode();else if(selEdge)deleteEdge();}
+
+// ══════════════════════════════════════════════
+// FIT VIEW
+// ══════════════════════════════════════════════
+function fitView(){
+  const allX=nodes.map(n=>n.x).concat(groups.map(g=>g.x));
+  const allY=nodes.map(n=>n.y).concat(groups.map(g=>g.y));
+  pan.x=28-Math.min(...allX);pan.y=28-Math.min(...allY);render();
+}
+
+// ══════════════════════════════════════════════
+// PANEL
+// ══════════════════════════════════════════════
+function togglePanel(){document.getElementById('panel').classList.toggle('open')}
+function addIssue(){
+  const b=document.getElementById('pbody');const d=document.createElement('div');
+  d.className='iss note';
+  d.innerHTML=`<div class="it" contenteditable="true">Note — Category</div><div contenteditable="true" style="margin-top:2px">Describe gap or issue here…</div>`;
+  b.appendChild(d);d.querySelector('[contenteditable]').focus();
+}
+
+// ══════════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════════
+render();
+fitView();
+</script>
+</body>
+</html>
