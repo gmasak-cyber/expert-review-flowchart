@@ -298,24 +298,11 @@ header p{font-size:9px;color:#7da8d4;margin-top:1px}
 <div class="modal-backdrop" id="ghModal">
   <div class="modal">
     <h2>☁️ Save to GitHub Pages</h2>
-    <p>Commits your current changes directly to your GitHub repo. The page will update live within ~60 seconds. Your token is stored only in this browser.</p>
+    <p>Sends your changes to the Cloudflare Worker, which commits them to GitHub. Pages rebuilds in ~60 seconds. The Worker URL is not a secret.</p>
 
-    <label>GitHub Personal Access Token</label>
-    <input type="password" id="ghToken" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx" autocomplete="off">
-    <div class="modal-hint">Needs <strong>repo</strong> scope. <a href="https://github.com/settings/tokens/new?scopes=repo&description=LifeX+Process+Map" target="_blank">Create one here ↗</a> — it's saved in your browser so you only do this once.</div>
-
-    <label>GitHub Username</label>
-    <input type="text" id="ghUser" placeholder="your-github-username">
-
-    <label>Repository Name</label>
-    <input type="text" id="ghRepo" placeholder="lifex-process-map">
-
-    <label>File path in repo</label>
-    <input type="text" id="ghPath" placeholder="index.html">
-    <div class="modal-hint">Usually <code>index.html</code>. If your file is in a subfolder use e.g. <code>docs/index.html</code>.</div>
-
-    <label>Branch</label>
-    <input type="text" id="ghBranch" placeholder="main">
+    <label>Cloudflare Worker URL</label>
+    <input type="text" id="ghWorker" placeholder="https://lifex-github-proxy.yourname.workers.dev">
+    <div class="modal-hint">Your Worker URL — saved in this browser so you only enter it once.</div>
 
     <hr class="modal-divider">
     <div id="ghStatus" class="modal-status"></div>
@@ -334,6 +321,12 @@ header p{font-size:9px;color:#7da8d4;margin-top:1px}
 // Right column (internal ops): x = 900 … 1130 (width ~230)
 // Vertical span of both: y = 20 … ~3500
 // ══════════════════════════════════════════════
+
+// ── Worker URL — hardcoded here, safe to commit ──
+// Replace the empty string with your Cloudflare Worker URL.
+// The Worker holds all GitHub credentials; this URL is not a secret.
+const WORKER_URL = /*WORKER_URL*/'';
+
 const NS='http://www.w3.org/2000/svg';
 const cw=document.getElementById('cw');
 const sv=document.getElementById('sv');
@@ -992,6 +985,9 @@ function saveAsHTML(){
   src = src.replace(/\/\*NID\*\/\d+/, '/*NID*/'+NID);
   src = src.replace(/\/\*EID\*\/\d+/, '/*EID*/'+EID);
   src = src.replace(/\/\*GID\*\/\d+/, '/*GID*/'+GID);
+  // Preserve worker URL
+  const wUrl = getWorkerUrl();
+  if(wUrl) src = src.replace(/\/\*WORKER_URL\*\/'[^']*'/, `/*WORKER_URL*/'${wUrl}'`);
 
   const blob = new Blob([src], {type:'text/html'});
   const a = document.createElement('a');
@@ -1169,20 +1165,23 @@ function scheduleLocalSave(){
 }
 
 // ══════════════════════════════════════════════
-// GITHUB COMMIT
+// GITHUB COMMIT via Cloudflare Worker proxy
+// Page sends base64 HTML → Worker → GitHub.
+// No credentials ever touch the browser.
+// WORKER_URL is safe to commit — it's just a URL.
 // ══════════════════════════════════════════════
 const GH_SETTINGS_KEY = 'lifex_gh_settings';
 
+function getWorkerUrl(){
+  // 1. Hardcoded constant (best — survives page reloads)
+  if(WORKER_URL) return WORKER_URL;
+  // 2. localStorage fallback (set when user enters URL in modal)
+  try { return (JSON.parse(localStorage.getItem(GH_SETTINGS_KEY)||'{}')).workerUrl || ''; }
+  catch(e){ return ''; }
+}
+
 function openGitHubModal(){
-  // Restore saved settings
-  try {
-    const s = JSON.parse(localStorage.getItem(GH_SETTINGS_KEY)||'{}');
-    if(s.token) document.getElementById('ghToken').value  = s.token;
-    if(s.user)  document.getElementById('ghUser').value   = s.user;
-    if(s.repo)  document.getElementById('ghRepo').value   = s.repo;
-    if(s.path)  document.getElementById('ghPath').value   = s.path  || 'index.html';
-    if(s.branch)document.getElementById('ghBranch').value = s.branch || 'main';
-  } catch(e){}
+  document.getElementById('ghWorker').value = getWorkerUrl();
   document.getElementById('ghStatus').className = 'modal-status';
   document.getElementById('ghStatus').textContent = '';
   document.getElementById('ghModal').classList.add('vis');
@@ -1191,31 +1190,26 @@ function openGitHubModal(){
 function closeGitHubModal(){
   document.getElementById('ghModal').classList.remove('vis');
 }
-// Close on backdrop click
 document.getElementById('ghModal').addEventListener('click', function(ev){
   if(ev.target === this) closeGitHubModal();
 });
 
 async function commitToGitHub(){
-  const token  = document.getElementById('ghToken').value.trim();
-  const user   = document.getElementById('ghUser').value.trim();
-  const repo   = document.getElementById('ghRepo').value.trim();
-  const path   = document.getElementById('ghPath').value.trim() || 'index.html';
-  const branch = document.getElementById('ghBranch').value.trim() || 'main';
+  const workerUrl = document.getElementById('ghWorker').value.trim() || getWorkerUrl();
 
-  if(!token || !user || !repo){
-    setGhStatus('err', '⚠ Please fill in token, username, and repository name.');
+  if(!workerUrl){
+    setGhStatus('err', '⚠ Enter your Cloudflare Worker URL first.');
     return;
   }
 
-  // Persist settings (token included — stored locally only)
-  localStorage.setItem(GH_SETTINGS_KEY, JSON.stringify({token,user,repo,path,branch}));
+  // Remember it in localStorage so it persists across reloads
+  try { localStorage.setItem(GH_SETTINGS_KEY, JSON.stringify({workerUrl})); } catch(e){}
 
   const btn = document.getElementById('ghCommitBtn');
   btn.disabled = true;
   setGhStatus('pending', '⏳ Building file…');
 
-  // Build the updated HTML source (same logic as saveAsHTML)
+  // Build updated HTML with live state baked in
   let src = document.documentElement.outerHTML;
   function replaceBetween(s, start, end, newContent){
     const si=s.indexOf(start), ei=s.indexOf(end);
@@ -1225,56 +1219,27 @@ async function commitToGitHub(){
   src = replaceBetween(src,'/*GROUPS_START*/','/*GROUPS_END*/', JSON.stringify(groups));
   src = replaceBetween(src,'/*NODES_START*/', '/*NODES_END*/',  JSON.stringify(nodes));
   src = replaceBetween(src,'/*EDGES_START*/', '/*EDGES_END*/',  JSON.stringify(edges));
-  src = src.replace(/\/\*NID\*\/\d+/,'/*NID*/'+NID);
-  src = src.replace(/\/\*EID\*\/\d+/,'/*EID*/'+EID);
-  src = src.replace(/\/\*GID\*\/\d+/,'/*GID*/'+GID);
+  src = src.replace(/\/\*NID\*\/\d+/,    '/*NID*/'+NID);
+  src = src.replace(/\/\*EID\*\/\d+/,    '/*EID*/'+EID);
+  src = src.replace(/\/\*GID\*\/\d+/,    '/*GID*/'+GID);
+  // Preserve the worker URL in saved file
+  src = src.replace(/\/\*WORKER_URL\*\/'[^']*'/, `/*WORKER_URL*/'${workerUrl}'`);
 
-  // Base64 encode
   const b64 = btoa(unescape(encodeURIComponent(src)));
-  const apiBase = `https://api.github.com/repos/${user}/${repo}/contents/${path}`;
-  const headers = {
-    'Authorization': 'token ' + token,
-    'Accept': 'application/vnd.github+json',
-    'Content-Type': 'application/json'
-  };
+  const now = new Date().toLocaleString('en-US',{dateStyle:'short',timeStyle:'short'});
 
   try {
-    // Step 1: get current file SHA (needed for update)
-    setGhStatus('pending', '⏳ Fetching current file SHA…');
-    let sha = null;
-    const getResp = await fetch(`${apiBase}?ref=${branch}`, {headers});
-    if(getResp.ok){
-      const data = await getResp.json();
-      sha = data.sha;
-    } else if(getResp.status !== 404){
-      const err = await getResp.json();
-      throw new Error(err.message || 'Failed to fetch file info');
-    }
-
-    // Step 2: commit
-    setGhStatus('pending', '⏳ Committing to GitHub…');
-    const now = new Date().toLocaleString('en-US',{dateStyle:'short',timeStyle:'short'});
-    const body = {
-      message: `Update process map — ${now}`,
-      content: b64,
-      branch
-    };
-    if(sha) body.sha = sha;
-
-    const putResp = await fetch(apiBase, {
-      method: 'PUT',
-      headers,
-      body: JSON.stringify(body)
+    setGhStatus('pending', '⏳ Sending to Worker…');
+    const resp = await fetch(workerUrl, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ content: b64, message: `Update process map — ${now}` })
     });
-
-    if(!putResp.ok){
-      const err = await putResp.json();
-      throw new Error(err.message || `HTTP ${putResp.status}`);
-    }
+    const result = await resp.json();
+    if(!resp.ok || result.error) throw new Error(result.error || `HTTP ${resp.status}`);
 
     setGhStatus('ok', '✓ Committed! GitHub Pages will update in ~60 seconds.');
     setSaveStatus('saved', '● GitHub saved');
-
   } catch(e) {
     setGhStatus('err', '✗ Error: ' + e.message);
   } finally {
