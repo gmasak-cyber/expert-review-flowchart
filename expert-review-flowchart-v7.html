@@ -169,7 +169,8 @@ header p{font-size:9px;color:#7da8d4;margin-top:1px}
   <div class="tsep"></div>
   <button class="btn" onclick="togglePanel()">⚠️ Gaps</button>
   <button class="btn" onclick="fitView()">⊡ Fit</button>
-  <button class="btn" onclick="window.print()">🖨 Print</button>
+  <button class="btn" onclick="saveAsHTML()" title="Download an editable copy with all current changes baked in">💾 Save copy</button>
+  <button class="btn" onclick="printFull()" title="Print the full flowchart across multiple pages">🖨 Print all</button>
   <span class="mpill" id="mpill">✥ Drag mode</span>
   <span class="tip">Dbl-click node/group to edit · Click any arrow to edit/delete</span>
 </div>
@@ -276,7 +277,7 @@ let connSrc=null,drawPt=null;
 let isPan=false,panStart={x:0,y:0},spDown=false;
 let editNid=null,editGid=null,editEid=null;
 let selNode=null,selEdge=null;
-let NID=500,EID=500,GID=500;
+let NID=/*NID*/500,EID=/*EID*/500,GID=/*GID*/500;
 
 const ownerColors={
   'Megan':'#3b82f6','Program Lead':'#8b5cf6','Team':'#64748b',
@@ -299,7 +300,7 @@ function ownerColor(name){
 const LX=60, LW=790;   // left column group band x/w
 const RX=890, RW=240;  // right column x/w
 
-let groups=[
+let groups=/*GROUPS_START*/[
   // ── Left column: main flow phases ──
   {id:'g1',label:'① Entry & Outreach Channels',    tx:'#1d4e89',bg:'#dbeafe',bd:'#93c5fd',x:LX,y:20,  w:LW,h:370},
   {id:'g2',label:'② Application Intake',            tx:'#1d4e89',bg:'#dbeafe',bd:'#93c5fd',x:LX,y:430, w:LW,h:420},
@@ -309,13 +310,13 @@ let groups=[
 
   // ── Right column: internal ops (single tall band alongside all phases) ──
   {id:'g0',label:'⓪ Internal Opportunity Management',tx:'#5b21b6',bg:'#fdf4ff',bd:'#d8b4fe',x:RX,y:20,w:RW,h:3070},
-];
+]/*GROUPS_END*/;
 
 // Node x positions
 // Left column nodes roughly centered in LX..LX+LW (center ~LX+LW/2 = 455)
 // Right column nodes in RX+30 .. RX+RW-30
 
-let nodes=[
+let nodes=/*NODES_START*/[
   // ════ LEFT: Phase 1 ════
   {id:'A1',x:LX+30,  y:58,  title:'Previously Engaged Experts',
    meta:'Input: Current network list',
@@ -465,9 +466,9 @@ let nodes=[
   {id:'Z9',x:RX+15,  y:2680, title:'Update Contacts Board',
    meta:'Add expert relationship notes, outcome, date\nCurrently not done — critical gap in record-keeping',
    tag:'Internal Ops · Record',color:'c-internal',gap:true,wt:'manual',own:'Megan',opp:'All'},
-];
+]/*NODES_END*/;
 
-let edges=[
+let edges=/*EDGES_START*/[
   // ── Internal ops internal connections ──
   {id:'e0a',from:'Z1',to:'Z2',fp:'bottom',tp:'top',  label:''},
   {id:'e0b',from:'Z2',to:'Z3',fp:'bottom',tp:'top',  label:'when Open'},
@@ -532,7 +533,7 @@ let edges=[
   {id:'e32',from:'PB1',to:'H4',fp:'bottom',tp:'top', label:''},
   {id:'e33',from:'PC1',to:'H4',fp:'bottom',tp:'top', label:''},
   {id:'e34',from:'PN1',to:'H4',fp:'bottom',tp:'top', label:''},
-];
+]/*EDGES_END*/;
 
 // ══════════════════════════════════════════════
 // HELPERS
@@ -887,6 +888,160 @@ function addIssue(){
   d.className='iss note';
   d.innerHTML=`<div class="it" contenteditable="true">Note — Category</div><div contenteditable="true" style="margin-top:2px">Describe gap or issue here…</div>`;
   b.appendChild(d);d.querySelector('[contenteditable]').focus();
+}
+
+// ══════════════════════════════════════════════
+// SAVE AS HTML
+// Directly replaces the data blocks in the source
+// using sentinel comments, so the saved file is a
+// fully independent, editable copy of the current state.
+// ══════════════════════════════════════════════
+function saveAsHTML(){
+  let src = document.documentElement.outerHTML;
+
+  // Helper: replace the content between two sentinel markers
+  function replaceBetween(str, startMark, endMark, newContent){
+    const si = str.indexOf(startMark);
+    const ei = str.indexOf(endMark);
+    if(si === -1 || ei === -1){ console.warn('Sentinel not found:', startMark); return str; }
+    return str.slice(0, si + startMark.length) + newContent + str.slice(ei);
+  }
+
+  // Serialise arrays — use compact JSON so they sit on one logical line
+  const gJson = JSON.stringify(groups);
+  const nJson = JSON.stringify(nodes);
+  const eJson = JSON.stringify(edges);
+
+  // Replace each data block
+  src = replaceBetween(src, '/*GROUPS_START*/', '/*GROUPS_END*/', gJson);
+  src = replaceBetween(src, '/*NODES_START*/',  '/*NODES_END*/',  nJson);
+  src = replaceBetween(src, '/*EDGES_START*/',  '/*EDGES_END*/',  eJson);
+
+  // Replace counters
+  src = src.replace(/\/\*NID\*\/\d+/, '/*NID*/'+NID);
+  src = src.replace(/\/\*EID\*\/\d+/, '/*EID*/'+EID);
+  src = src.replace(/\/\*GID\*\/\d+/, '/*GID*/'+GID);
+
+  const blob = new Blob([src], {type:'text/html'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  const ts = new Date().toISOString().slice(0,16).replace('T','-').replace(/:/g,'');
+  a.download = 'lifex-process-map-'+ts+'.html';
+  a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href), 5000);
+}
+
+// ══════════════════════════════════════════════
+// PRINT FULL CHART (multi-page)
+// Renders the entire canvas into a hidden
+// full-resolution div and prints it tiled across
+// as many pages as needed (A4 landscape).
+// ══════════════════════════════════════════════
+function printFull(){
+  // 1. Compute bounding box of all content
+  const allX = nodes.map(n=>n.x).concat(groups.map(g=>g.x));
+  const allY = nodes.map(n=>n.y).concat(groups.map(g=>g.y));
+  const allX2= nodes.map(n=>n.x+215).concat(groups.map(g=>g.x+g.w));
+  const allY2= nodes.map(n=>n.y+100).concat(groups.map(g=>g.y+g.h));
+  const minX=Math.min(...allX)-30, minY=Math.min(...allY)-30;
+  const maxX=Math.max(...allX2)+30, maxY=Math.max(...allY2)+30;
+  const totalW=maxX-minX, totalH=maxY-minY;
+
+  // 2. Build a print window with the full SVG + all nodes at real coords
+  const pw = window.open('','_blank','width=1200,height=800');
+  if(!pw){ alert('Pop-up blocked — please allow pop-ups and try again.'); return; }
+
+  // Temporarily shift pan so content starts at (20,20)
+  const savedPan = {...pan};
+  pan.x = 20 - minX;
+  pan.y = 20 - minY;
+  render(); // re-render with print pan
+
+  // Collect all node HTML
+  let nodesHtml = '';
+  document.querySelectorAll('.fcn').forEach(el=>{
+    nodesHtml += el.outerHTML.replace(/class="fcn /g, 'class="fcn pn ');
+  });
+
+  // Collect SVG content (strip <svg> wrapper, keep inner)
+  const svgInner = sv.innerHTML;
+
+  pw.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8">
+<title>LifeX Process Map — Full Print</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Mono:wght@400;500&family=Epilogue:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --auto-bg:#e0f2fe;--auto-bd:#38bdf8;--auto-tx:#0369a1;
+  --manual-bg:#fef9c3;--manual-bd:#facc15;--manual-tx:#854d0e;
+  --cond-bg:#fef3c7;--cond-bd:#f59e0b;--cond-tx:#92400e;
+  --sys-bg:#f3e8ff;--sys-bd:#a855f7;--sys-tx:#6b21a8;
+}
+body{background:#eceae4;font-family:'Epilogue',sans-serif}
+.wrap{position:relative;width:${totalW+40}px;height:${totalH+40}px}
+svg.psv{position:absolute;top:0;left:0;width:${totalW+40}px;height:${totalH+40}px;overflow:visible}
+.fcn{position:absolute;background:#fff;border-radius:8px;padding:0;
+  border:1.5px solid #ddd;overflow:hidden;min-width:148px;max-width:215px;
+  box-shadow:0 1px 4px rgba(0,0,0,.1)}
+.fcn.c-entry{background:#dbeafe;border-color:#93c5fd}
+.fcn.c-triage{background:#fef3c7;border-color:#fcd34d}
+.fcn.c-priority{background:#fee2e2;border-color:#fca5a5}
+.fcn.c-decision{background:#dcfce7;border-color:#86efac}
+.fcn.c-diamond{background:#fffbeb;border-color:#fbbf24}
+.fcn.c-merge{background:#f5f3ff;border-color:#a5b4fc}
+.fcn.c-nomatch{background:#fef2f2;border-color:#f87171}
+.fcn.c-matchinfo{background:#f0fdf4;border-color:#4ade80}
+.fcn.c-matchno{background:#fffbeb;border-color:#fbbf24}
+.fcn.c-note{background:#f0f9ff;border-color:#7dd3fc}
+.fcn.c-internal{background:#fdf4ff;border-color:#d8b4fe}
+.fcn.sn,.fcn.srn,.fcn.tgn,.fcn.dragging{outline:none;opacity:1;cursor:default}
+.nhead{padding:6px 11px 4px;display:flex;flex-direction:column;gap:2px}
+.ntag{font-family:'DM Mono',monospace;font-size:6.5px;letter-spacing:1px;text-transform:uppercase;font-weight:500;opacity:.5}
+.ntitle{font-size:10.5px;font-weight:600;color:#1a1a2e;line-height:1.3;word-break:break-word}
+.nmeta{font-size:8px;color:#777;margin-top:2px;font-family:'DM Mono',monospace;line-height:1.4;word-break:break-word;white-space:pre-line}
+.nfoot{padding:3px 9px 4px;display:flex;align-items:center;gap:4px;border-top:1px solid rgba(0,0,0,.07);background:rgba(255,255,255,.5);flex-wrap:wrap}
+.wtype{display:inline-flex;align-items:center;gap:2px;font-size:6.5px;font-family:'DM Mono',monospace;letter-spacing:.5px;text-transform:uppercase;font-weight:600;padding:1px 4px;border-radius:3px;white-space:nowrap}
+.wtype.auto   {background:var(--auto-bg);color:var(--auto-tx);border:1px solid var(--auto-bd)}
+.wtype.manual {background:var(--manual-bg);color:var(--manual-tx);border:1px solid var(--manual-bd)}
+.wtype.cond   {background:var(--cond-bg);color:var(--cond-tx);border:1px solid var(--cond-bd)}
+.wtype.system {background:var(--sys-bg);color:var(--sys-tx);border:1px solid var(--sys-bd)}
+.wtype.expert {background:#ecfdf5;color:#065f46;border:1px solid #6ee7b7}
+.owner-pill{display:inline-flex;align-items:center;gap:2px;font-size:6.5px;font-family:'DM Mono',monospace;padding:1px 4px;border-radius:10px;background:#f1f5f9;color:#475569;border:1px solid #e2e8f0;white-space:nowrap}
+.owner-dot{width:5px;height:5px;border-radius:50%;flex-shrink:0}
+.gbadge{position:absolute;top:-7px;right:-7px;background:#dc2626;color:#fff;width:15px;height:15px;border-radius:50%;font-size:8px;font-weight:700;display:flex;align-items:center;justify-content:center;border:1.5px solid #fff;z-index:5}
+.ports{display:none}
+@page{size:A4 landscape;margin:10mm}
+@media print{
+  body{background:#fff}
+  .wrap{transform-origin:top left}
+}
+</style>
+</head><body>
+<div class="wrap" id="wrap">
+<svg class="psv" xmlns="http://www.w3.org/2000/svg">${svgInner}</svg>
+${nodesHtml}
+</div>
+<script>
+window.addEventListener('load',function(){
+  // Scale to fit A4 landscape printable area (~277mm × 190mm at 96dpi ≈ 1050×718px)
+  var wrap=document.getElementById('wrap');
+  var pw=${totalW+40}, ph=${totalH+40};
+  var maxW=1050, maxH=718;
+  var scale=Math.min(maxW/pw, maxH/ph, 1);
+  wrap.style.transform='scale('+scale+')';
+  wrap.style.width=pw+'px';
+  wrap.style.height=ph+'px';
+  // On screen show a print button then auto-print
+  setTimeout(function(){window.print();},600);
+});
+<\/script>
+</body></html>`);
+  pw.document.close();
+
+  // Restore original pan
+  pan.x = savedPan.x;
+  pan.y = savedPan.y;
+  render();
 }
 
 // ══════════════════════════════════════════════
