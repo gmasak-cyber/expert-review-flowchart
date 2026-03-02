@@ -255,7 +255,8 @@ header p{font-size:9px;color:#7da8d4;margin-top:1px}
   <button class="btn" onclick="zoomStep(+0.15)" title="Zoom in">＋</button>
   <div class="tsep"></div>
   <button class="btn" onclick="saveAsHTML()" title="Download a fully editable copy of the current state">💾 Download</button>
-  <button class="btn" onclick="openGitHubModal()" title="Commit changes directly to your GitHub Pages repo">☁️ Save to GitHub</button>
+  <button class="btn" onclick="exportStateJSON()" title="Export editable flowchart data as JSON">🧾 Export JSON</button>
+  <button class="btn" onclick="triggerJsonImport()" title="Import a previously exported JSON file">📥 Import JSON</button>
   <button class="btn" onclick="printFull()" title="Print the full flowchart across multiple pages">🖨 Print all</button>
   <div class="tsep"></div>
   <span class="save-status idle" id="saveStatus">● local saved</span>
@@ -364,6 +365,7 @@ header p{font-size:9px;color:#7da8d4;margin-top:1px}
     <button class="addi" onclick="addIssue()">＋ Add Gap / Risk / Note</button>
   </div>
 </div>
+<input type="file" id="jsonImportInput" accept="application/json,.json" style="display:none">
 
 <!-- ── GITHUB COMMIT MODAL ── -->
 <div class="modal-backdrop" id="ghModal">
@@ -1572,14 +1574,14 @@ function getState(){
 
 function applyState(s){
   if(!s) return;
-  if(s.nodes)  nodes  = s.nodes;
-  if(s.edges)  edges  = s.edges;
-  if(s.groups) groups = s.groups;
-  if(s.NID)    NID    = s.NID;
-  if(s.EID)    EID    = s.EID;
-  if(s.GID)    GID    = s.GID;
-  if(s.pan)    pan    = s.pan;
-  if(s.zoom)   zoom   = s.zoom;
+  if(Array.isArray(s.nodes))  nodes  = s.nodes;
+  if(Array.isArray(s.edges))  edges  = s.edges;
+  if(Array.isArray(s.groups)) groups = s.groups;
+  if(typeof s.NID === 'number') NID = s.NID;
+  if(typeof s.EID === 'number') EID = s.EID;
+  if(typeof s.GID === 'number') GID = s.GID;
+  if(s.pan && typeof s.pan.x === 'number' && typeof s.pan.y === 'number') pan = s.pan;
+  if(typeof s.zoom === 'number') zoom = s.zoom;
 }
 
 function saveLocal(){
@@ -1611,6 +1613,57 @@ function scheduleLocalSave(){
   clearTimeout(saveTimer);
   saveTimer = setTimeout(saveLocal, 800);
 }
+
+function exportStateJSON(){
+  const payload = {
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    state: getState()
+  };
+  const stamp = new Date().toISOString().replace(/[:.]/g, '-');
+  const blob = new Blob([JSON.stringify(payload, null, 2)], {type: 'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `lifex-process-map-${stamp}.json`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(a.href);
+  setSaveStatus('saved', '● JSON exported');
+}
+
+function triggerJsonImport(){
+  const picker = document.getElementById('jsonImportInput');
+  picker.value = '';
+  picker.click();
+}
+
+async function importStateJSONFromFile(file){
+  if(!file) return;
+  try {
+    const raw = await file.text();
+    const parsed = JSON.parse(raw);
+    const state = parsed && parsed.state ? parsed.state : parsed;
+
+    if(!state || !Array.isArray(state.nodes) || !Array.isArray(state.edges) || !Array.isArray(state.groups)){
+      throw new Error('Invalid file format. Expected nodes, edges, and groups.');
+    }
+
+    applyState(state);
+    render();
+    updateZoomPill();
+    saveLocal();
+    setSaveStatus('saved', '● JSON imported');
+  } catch(e) {
+    alert(`Import failed: ${e.message}`);
+    setSaveStatus('unsaved', '● import failed');
+  }
+}
+
+document.getElementById('jsonImportInput').addEventListener('change', async function(ev){
+  const file = ev.target.files && ev.target.files[0];
+  await importStateJSONFromFile(file);
+});
 
 // ══════════════════════════════════════════════
 // GITHUB COMMIT via Cloudflare Worker proxy
