@@ -124,6 +124,44 @@ header p{font-size:9px;color:#7da8d4;margin-top:1px}
 .save-status.unsaved{color:#dc2626;background:#fef2f2;border-color:#fca5a5}
 .save-status.idle{color:#94a3b8;background:var(--bg);border-color:#e0ddd8}
 
+/* ── ZOOM INDICATOR ── */
+.zoom-pill{font-size:8.5px;font-family:'DM Mono',monospace;padding:2px 7px;border-radius:20px;border:1px solid #e0ddd8;color:#888;background:var(--bg);white-space:nowrap;cursor:default;user-select:none}
+
+/* ── NODE SHAPES ──
+   Shapes are applied via CSS clip / border-radius overrides on .fcn
+   Actual diamond/hexagon shapes are drawn in SVG behind each node.
+   DOM nodes always remain rectangular for layout; shape is a visual override.
+*/
+/* Pill */
+.fcn.sh-pill{border-radius:50px!important}
+/* Diamond — shown as rotated square via outline; content box stays normal */
+.fcn.sh-diamond{border-radius:4px!important;transform-origin:center center}
+/* Hexagon — clip-path */
+.fcn.sh-hex{clip-path:polygon(25% 0%,75% 0%,100% 50%,75% 100%,25% 100%,0% 50%);border-radius:0!important;overflow:visible}
+/* Parallelogram */
+.fcn.sh-para{clip-path:polygon(10% 0%,100% 0%,90% 100%,0% 100%);border-radius:0!important}
+
+/* ── FUTURE STATE ── */
+.fcn.future{
+  opacity:.75;
+  border-style:dashed!important;
+  border-width:2px!important;
+}
+.fcn.future .nhead::before{
+  content:'◌ FUTURE STATE';
+  display:block;font-family:'DM Mono',monospace;font-size:6.5px;
+  letter-spacing:1.2px;color:#7c3aed;font-weight:700;
+  background:#f5f3ff;border-radius:3px;padding:1px 4px;
+  margin-bottom:3px;width:fit-content;
+}
+.fcn.future{background:repeating-linear-gradient(
+  135deg,
+  transparent,
+  transparent 8px,
+  rgba(124,58,237,.04) 8px,
+  rgba(124,58,237,.04) 9px
+)!important}
+
 /* ── GITHUB MODAL ── */
 .modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:2000;display:none;align-items:center;justify-content:center}
 .modal-backdrop.vis{display:flex}
@@ -177,6 +215,17 @@ header p{font-size:9px;color:#7da8d4;margin-top:1px}
   <button class="btn" onclick="addGroup()">＋ Group</button>
   <button class="btn red" id="delBtn" style="display:none" onclick="deleteSelected()">🗑 Delete</button>
   <div class="tsep"></div>
+  <span style="font-size:8px;color:#999;font-family:'DM Mono',monospace">Shape:</span>
+  <div class="sws" id="shapePicker">
+    <div class="sw" style="background:#f1f5f9;border-radius:3px;font-size:8px;display:flex;align-items:center;justify-content:center;color:#333" data-sh="" title="Rectangle">▭</div>
+    <div class="sw" style="background:#f1f5f9;border-radius:50px;font-size:8px;display:flex;align-items:center;justify-content:center;color:#333" data-sh="sh-pill" title="Pill">⬭</div>
+    <div class="sw" style="background:#f1f5f9;transform:rotate(45deg);font-size:7px;display:flex;align-items:center;justify-content:center;color:#333" data-sh="sh-diamond" title="Diamond">◆</div>
+    <div class="sw" style="background:#f1f5f9;clip-path:polygon(25% 0%,75% 0%,100% 50%,75% 100%,25% 100%,0% 50%);font-size:8px;display:flex;align-items:center;justify-content:center;color:#333;border-radius:0" data-sh="sh-hex" title="Hexagon">⬡</div>
+    <div class="sw" style="background:#f1f5f9;clip-path:polygon(10% 0%,100% 0%,90% 100%,0% 100%);font-size:8px;display:flex;align-items:center;justify-content:center;color:#333;border-radius:0" data-sh="sh-para" title="Parallelogram">▱</div>
+  </div>
+  <div class="tsep"></div>
+  <button class="btn" id="futureBtn" onclick="toggleFuture()" title="Mark selected node as Future State">◌ Future State</button>
+  <div class="tsep"></div>
   <span style="font-size:8px;color:#999;font-family:'DM Mono',monospace">Color:</span>
   <div class="sws" id="sws">
     <div class="sw" style="background:#dbeafe"                      data-c="c-entry"    title="Entry/Intake"></div>
@@ -201,6 +250,9 @@ header p{font-size:9px;color:#7da8d4;margin-top:1px}
   <div class="tsep"></div>
   <button class="btn" onclick="togglePanel()">⚠️ Gaps</button>
   <button class="btn" onclick="fitView()">⊡ Fit</button>
+  <button class="btn" onclick="zoomStep(-0.15)" title="Zoom out">−</button>
+  <span class="zoom-pill" id="zoomPill">100%</span>
+  <button class="btn" onclick="zoomStep(+0.15)" title="Zoom in">＋</button>
   <div class="tsep"></div>
   <button class="btn" onclick="saveAsHTML()" title="Download a fully editable copy of the current state">💾 Download</button>
   <button class="btn" onclick="openGitHubModal()" title="Commit changes directly to your GitHub Pages repo">☁️ Save to GitHub</button>
@@ -235,6 +287,19 @@ header p{font-size:9px;color:#7da8d4;margin-top:1px}
     <input id="pOpp" type="text" placeholder="e.g. All, Connect, Launchpad">
     <label>Gap badge</label>
     <select id="pGap"><option value="">None</option><option value="1">Show gap badge !</option></select>
+    <label>Shape</label>
+    <select id="pShape">
+      <option value="">Rectangle (default)</option>
+      <option value="sh-pill">Pill / Rounded</option>
+      <option value="sh-diamond">Diamond</option>
+      <option value="sh-hex">Hexagon</option>
+      <option value="sh-para">Parallelogram</option>
+    </select>
+    <label>State</label>
+    <select id="pFuture">
+      <option value="">Current state</option>
+      <option value="1">◌ Future state</option>
+    </select>
     <div class="pa">
       <button class="pb sv" onclick="saveNode()">Save</button>
       <button class="pb dl" onclick="deleteNode()">Delete</button>
@@ -265,6 +330,12 @@ header p{font-size:9px;color:#7da8d4;margin-top:1px}
   <div class="pop" id="ePop" style="min-width:175px">
     <label>Edge label</label>
     <input id="eLbl" type="text" placeholder="Yes / No / sometimes …">
+    <label style="margin-top:8px">Label font size</label>
+    <div style="display:flex;gap:8px;align-items:center">
+      <button class="pb" style="padding:6px 10px" onclick="bumpEdgeFont(-1)">A-</button>
+      <input id="eFont" type="number" min="6" max="20" step="1" style="width:70px">
+      <button class="pb" style="padding:6px 10px" onclick="bumpEdgeFont(1)">A+</button>
+    </div>
     <div class="pa">
       <button class="pb sv" onclick="saveEdge()">Save</button>
       <button class="pb dl" onclick="deleteEdge()">Delete Edge</button>
@@ -301,7 +372,7 @@ header p{font-size:9px;color:#7da8d4;margin-top:1px}
     <p>Sends your changes to the Cloudflare Worker, which commits them to GitHub. Pages rebuilds in ~60 seconds. The Worker URL is not a secret.</p>
 
     <label>Cloudflare Worker URL</label>
-    <input type="text" id="ghWorker" placeholder="expert-review-flowchart.gmasak.workers.dev">
+    <input type="text" id="ghWorker" placeholder="https://lifex-github-proxy.yourname.workers.dev">
     <div class="modal-hint">Your Worker URL — saved in this browser so you only enter it once.</div>
 
     <hr class="modal-divider">
@@ -334,8 +405,13 @@ const nl=document.getElementById('nl');
 
 let mode='drag';
 let pan={x:30,y:30};
+let zoom=1.0;
 let dragN=null,dragOff={x:0,y:0};
 let connSrc=null,drawPt=null;
+
+let edgeDrag=null;
+let labelDrag=null; // {id, end:'from'|'to', sx, sy, snap:{id,port}}
+const EDGE_SNAP_PX = 36;
 let isPan=false,panStart={x:0,y:0},spDown=false;
 let editNid=null,editGid=null,editEid=null;
 let selNode=null,selEdge=null;
@@ -602,20 +678,104 @@ let edges=/*EDGES_START*/[
 // ══════════════════════════════════════════════
 function mkel(t){return document.createElementNS(NS,t)}
 function sat(e,o){Object.entries(o).forEach(([k,v])=>e.setAttribute(k,v))}
+
+// Convert world coords → screen coords
+function w2s(wx,wy){ return {x: wx*zoom + pan.x, y: wy*zoom + pan.y}; }
+// Convert screen coords → world coords
+function s2w(sx,sy){ return {x: (sx-pan.x)/zoom, y: (sy-pan.y)/zoom}; }
+
 function nRect(id){
-  const n=nodes.find(x=>x.id===id);if(!n)return null;
+  const n=nodes.find(x=>x.id===id);
+  if(!n) return null;
   const el=document.getElementById('nd-'+id);
-  return{x:n.x,y:n.y,w:el?el.offsetWidth:190,h:el?el.offsetHeight:80};
+  // offsetWidth/Height are NOT affected by CSS transform: scale();
+  // They already represent the node's size in world units.
+  const ww = el ? el.offsetWidth  : 190;
+  const wh = el ? el.offsetHeight : 80;
+  return {x:n.x, y:n.y, w:ww, h:wh};
 }
 function portXY(id,port){
   const r=nRect(id);if(!r)return null;
+  let wx,wy;
   switch(port){
-    case'top':    return{x:r.x+r.w/2,y:r.y};
-    case'bottom': return{x:r.x+r.w/2,y:r.y+r.h};
-    case'left':   return{x:r.x,      y:r.y+r.h/2};
-    case'right':  return{x:r.x+r.w,  y:r.y+r.h/2};
+    case'top':    wx=r.x+r.w/2; wy=r.y;        break;
+    case'bottom': wx=r.x+r.w/2; wy=r.y+r.h;    break;
+    case'left':   wx=r.x;        wy=r.y+r.h/2;  break;
+    case'right':  wx=r.x+r.w;   wy=r.y+r.h/2;  break;
+    default:      wx=r.x+r.w/2; wy=r.y+r.h/2;
   }
+  return w2s(wx,wy);
 }
+
+// Find nearest node port in screen space (magnetized endpoints)
+function nearestPort(sx, sy){
+  let best=null;
+  const ports=['top','right','bottom','left'];
+  for(const n of nodes){
+    for(const p of ports){
+      const pt=portXY(n.id,p);
+      if(!pt) continue;
+      const dx=pt.x-sx, dy=pt.y-sy;
+      const d=Math.hypot(dx,dy);
+      if(!best || d<best.d) best={id:n.id, port:p, d};
+    }
+  }
+  return best;
+}
+function startEdgeDrag(edgeId, end, ev){
+  ev.stopPropagation();
+  if(mode!=='connect'){ setMode('connect'); } // edge editing lives in Connect mode
+  selEdge=edgeId; selNode=null;
+  const wr=cw.getBoundingClientRect();
+  const sx=ev.clientX-wr.left, sy=ev.clientY-wr.top;
+  edgeDrag={id:edgeId, end, sx, sy, snap:null};
+  document.querySelectorAll('.fcn').forEach(e=>e.classList.remove('tgn'));
+  renderSvg();
+}
+
+// Return the SVG path 'd' string for an edge (in screen coords)
+function edgeD(e){
+  const p1=portXY(e.from,e.fp||'bottom');
+  const p2=portXY(e.to,  e.tp||'top');
+  if(!p1||!p2) return null;
+  return mkPath(p1.x,p1.y,p2.x,p2.y,e.fp||'bottom',e.tp||'top');
+}
+
+function startLabelDrag(edgeId, ev){
+  ev.stopPropagation();
+  selEdge=edgeId; selNode=null;
+  const e=edges.find(x=>x.id===edgeId); if(!e) return;
+  if(e.labelT==null) e.labelT=0.5;
+  labelDrag={id:edgeId};
+  renderSvg();
+}
+
+// Project the cursor onto an SVG path and return t in [0..1]
+function projectToPathT(d, sx, sy){
+  const tmp=mkel('path'); sat(tmp,{d,fill:'none',stroke:'none'});
+  sv.appendChild(tmp);
+  const L=Math.max(1,tmp.getTotalLength());
+  let bestL=0, bestD=1e18;
+
+  // coarse sampling
+  const N=90;
+  for(let i=0;i<=N;i++){
+    const ll=(i/N)*L;
+    const p=tmp.getPointAtLength(ll);
+    const dd=(p.x-sx)*(p.x-sx)+(p.y-sy)*(p.y-sy);
+    if(dd<bestD){bestD=dd;bestL=ll;}
+  }
+  // local refine around bestL
+  const step=Math.max(0.5, L/600); // fine step
+  for(let ll=Math.max(0,bestL-10*step); ll<=Math.min(L,bestL+10*step); ll+=step){
+    const p=tmp.getPointAtLength(ll);
+    const dd=(p.x-sx)*(p.x-sx)+(p.y-sy)*(p.y-sy);
+    if(dd<bestD){bestD=dd;bestL=ll;}
+  }
+  sv.removeChild(tmp);
+  return bestL/L;
+}
+
 function mkPath(x1,y1,x2,y2,fp,tp){
   let c1x=x1,c1y=y1,c2x=x2,c2y=y2;
   const hf=fp==='bottom'||fp==='top', vt=tp==='top'||tp==='bottom';
@@ -643,12 +803,13 @@ function renderSvg(){
   // groups
   groups.forEach(g=>{
     const[tx,bg,bd]=g.color?g.color.split('|'):[g.tx,g.bg,g.bd];
+    const sp=w2s(g.x,g.y);
     const r=mkel('rect');
-    sat(r,{x:g.x+pan.x,y:g.y+pan.y,width:g.w,height:g.h,rx:'11',fill:bg,stroke:bd,'stroke-width':'1.8','fill-opacity':'.48',cursor:'pointer'});
+    sat(r,{x:sp.x,y:sp.y,width:g.w*zoom,height:g.h*zoom,rx:11*zoom,fill:bg,stroke:bd,'stroke-width':'1.8','fill-opacity':'.48',cursor:'pointer'});
     r.addEventListener('dblclick',ev=>{ev.stopPropagation();openGrp(g.id,ev)});
     sv.appendChild(r);
-    const fh=Math.min(g.h-8,280);
-    const fo=mkel('foreignObject');sat(fo,{x:g.x+pan.x+4,y:g.y+pan.y+(g.h-fh)/2,width:'22',height:fh});
+    const fh=Math.min(g.h*zoom-8,280);
+    const fo=mkel('foreignObject');sat(fo,{x:sp.x+4,y:sp.y+(g.h*zoom-fh)/2,width:'22',height:fh});
     const d=document.createElementNS('http://www.w3.org/1999/xhtml','div');
     d.className='sll';d.style.color=tx;d.textContent=g.label;
     d.addEventListener('dblclick',ev=>{ev.stopPropagation();openGrp(g.id,ev)});
@@ -671,35 +832,101 @@ function renderSvg(){
     const mend=isSel?'url(#arr-s)':isInternal?'url(#arr-int)':isCross?'url(#arr-lr)':'url(#arr)';
     const opacity=isSel?'1':isCross?'.55':isInternal?'.55':'.45';
 
-    const d=mkPath(p1.x+pan.x,p1.y+pan.y,p2.x+pan.x,p2.y+pan.y,e.fp||'bottom',e.tp||'top');
+    const d=mkPath(p1.x,p1.y,p2.x,p2.y,e.fp||'bottom',e.tp||'top');
 
     const hit=mkel('path');sat(hit,{d,stroke:'transparent','stroke-width':'18',fill:'none',cursor:'pointer'});
+    // Click selects. Drag starts rewiring the nearest endpoint. Double-click opens editor.
     hit.addEventListener('click',ev=>{ev.stopPropagation();clickEdge(e.id,ev)});
+    hit.addEventListener('dblclick',ev=>{ev.stopPropagation();openEdge(e.id,ev)});
+    hit.addEventListener('mousedown',ev=>{
+      ev.stopPropagation();
+      if(mode!=='connect') setMode('connect');
+      // Choose the nearer end to the cursor.
+      const wr=cw.getBoundingClientRect();
+      const sx=ev.clientX-wr.left, sy=ev.clientY-wr.top;
+      const d1=Math.hypot(p1.x-sx,p1.y-sy);
+      const d2=Math.hypot(p2.x-sx,p2.y-sy);
+      selEdge=e.id; selNode=null;
+      startEdgeDrag(e.id, d1<=d2?'from':'to', ev);
+    });
     sv.appendChild(hit);
 
     const path=mkel('path');
     sat(path,{d,stroke,'stroke-width':isSel?'2.2':'1.5',fill:'none','stroke-opacity':opacity,
       'stroke-dasharray':dashed?'5,4':'none','marker-end':mend,cursor:'pointer'});
     path.addEventListener('click',ev=>{ev.stopPropagation();clickEdge(e.id,ev)});
+    path.addEventListener('dblclick',ev=>{ev.stopPropagation();openEdge(e.id,ev)});
     sv.appendChild(path);
 
     if(e.label){
-      const mx=(p1.x+pan.x+p2.x+pan.x)/2;
-      const my=(p1.y+pan.y+p2.y+pan.y)/2;
-      const tw=e.label.length*4.6+12;
+      // label position is user-draggable along the curve via edge.labelT (0..1)
+      if(e.labelT==null) e.labelT = 0.5;
+      if(e.fontSize==null) e.fontSize = 8;
+
+      // compute a point on the rendered SVG path for label placement
+      const tmp=mkel('path'); sat(tmp,{d,fill:'none',stroke:'none'});
+      sv.appendChild(tmp);
+      const L = Math.max(1, tmp.getTotalLength());
+      const tpos = Math.max(0, Math.min(1, e.labelT));
+      const pt = tmp.getPointAtLength(tpos * L);
+      sv.removeChild(tmp);
+
+      const mx=pt.x, my=pt.y;
+      const fs = (e.fontSize||8) * zoom;
+      const tw=Math.max(22, e.label.length*(fs*0.55)+12);
+
       const bgr=mkel('rect');
-      sat(bgr,{x:mx-tw/2,y:my-8,width:tw,height:13,rx:'6',fill:'white','fill-opacity':'.92',stroke:isSel?'#2563eb':isCross?'#7c3aed':'#ccc','stroke-width':'.8'});
+      sat(bgr,{x:mx-tw/2,y:my-(fs+4)/2,width:tw,height:(fs+6),rx:'6',fill:'white','fill-opacity':'.92',stroke:isSel?'#2563eb':isCross?'#7c3aed':'#ccc','stroke-width':'.8'});
+      bgr.style.cursor='grab';
+      // Drag label along curve
+      bgr.addEventListener('mousedown',ev=>startLabelDrag(e.id,ev));
+      bgr.addEventListener('click',ev=>{ev.stopPropagation();clickEdge(e.id,ev)});
+      bgr.addEventListener('dblclick',ev=>{ev.stopPropagation();openEdge(e.id,ev)});
       sv.appendChild(bgr);
+
       const t=mkel('text');
-      sat(t,{x:mx,y:my+1.5,'text-anchor':'middle','font-size':'8','font-family':'DM Mono,monospace',fill:isSel?'#2563eb':isCross?'#6d28d9':'#64748b','pointer-events':'none'});
-      t.textContent=e.label;sv.appendChild(t);
+      sat(t,{x:mx,y:my+fs*0.34,'text-anchor':'middle','font-size':String(fs),'font-family':'DM Mono,monospace',
+        fill:isSel?'#2563eb':isCross?'#6d28d9':'#64748b'});
+      t.textContent=e.label;
+      t.style.cursor='grab';
+      t.addEventListener('mousedown',ev=>startLabelDrag(e.id,ev));
+      t.addEventListener('click',ev=>{ev.stopPropagation();clickEdge(e.id,ev)});
+      t.addEventListener('dblclick',ev=>{ev.stopPropagation();openEdge(e.id,ev)});
+      sv.appendChild(t);
     }
+
+    // selected edge endpoint handles (drag to re-wire; magnetizes to nearest node port)
+    if(isSel){
+      const h1=mkel('circle'); sat(h1,{cx:p1.x,cy:p1.y,r:'6',fill:'#ffffff',stroke:'#2563eb','stroke-width':'2',cursor:'grab'});
+      h1.addEventListener('mousedown',ev=>startEdgeDrag(e.id,'from',ev));
+      sv.appendChild(h1);
+
+      const h2=mkel('circle'); sat(h2,{cx:p2.x,cy:p2.y,r:'6',fill:'#ffffff',stroke:'#2563eb','stroke-width':'2',cursor:'grab'});
+      h2.addEventListener('mousedown',ev=>startEdgeDrag(e.id,'to',ev));
+      sv.appendChild(h2);
+
+      // hint line while dragging
+      if(edgeDrag && edgeDrag.id===e.id){
+        const hx = edgeDrag.end==='from'?p2.x:p1.x;
+        const hy = edgeDrag.end==='from'?p2.y:p1.y;
+        const tx = (edgeDrag.snap?edgeDrag.snap.pt.x:edgeDrag.sx);
+        const ty = (edgeDrag.snap?edgeDrag.snap.pt.y:edgeDrag.sy);
+        const lp=mkel('path'); sat(lp,{d:`M${hx},${hy} L${tx},${ty}`,stroke:'#2563eb','stroke-width':'1.6',fill:'none','stroke-dasharray':'6,4','stroke-opacity':'.65'});
+        sv.appendChild(lp);
+
+        if(edgeDrag.snap){
+          const rr=mkel('circle'); sat(rr,{cx:edgeDrag.snap.pt.x,cy:edgeDrag.snap.pt.y,r:'9',fill:'none',stroke:'#2563eb','stroke-width':'2','stroke-opacity':'.35'});
+          sv.appendChild(rr);
+        }
+      }
+    }
+
   });
 
   // live draw
   if(drawPt&&connSrc){
     const p1=portXY(connSrc.id,connSrc.port);
-    if(p1){const p=mkel('path');sat(p,{d:`M${p1.x+pan.x},${p1.y+pan.y} L${drawPt.x},${drawPt.y}`,stroke:'#f59e0b','stroke-width':'2',fill:'none','stroke-dasharray':'6,4','marker-end':'url(#arr-d)'});sv.appendChild(p);}
+    if(p1){const p=mkel('path');sat(p,{d:`M${p1.x},${p1.y} L${drawPt.x},${drawPt.y}`,stroke:'#f59e0b','stroke-width':'2',fill:'none','stroke-dasharray':'6,4','marker-end':'url(#arr-d)'});sv.appendChild(p);}
   }
 }
 
@@ -722,7 +949,12 @@ function renderNodes(){
       el.addEventListener('dblclick',ev=>{ev.stopPropagation();openNode(n.id)});
       el.querySelectorAll('.port').forEach(p=>{p.addEventListener('mousedown',ev=>{ev.stopPropagation();startConn(n.id,p.dataset.p,ev)})});
     }
-    el.className='fcn'+(n.color?' '+n.color:'')+(selNode===n.id?' sn':'')+(connSrc&&connSrc.id===n.id?' srn':'');
+    el.className='fcn'
+      +(n.color?' '+n.color:'')
+      +(n.shape?' '+n.shape:'')
+      +(n.future?' future':'')
+      +(selNode===n.id?' sn':'')
+      +(connSrc&&connSrc.id===n.id?' srn':'');
     el.querySelector('.ntag').textContent  =n.tag||'';
     el.querySelector('.ntitle').textContent=n.title;
     el.querySelector('.nmeta').textContent =n.meta||'';
@@ -743,7 +975,12 @@ function renderNodes(){
       os.style.cssText='font-size:6.5px;font-family:"DM Mono",monospace;color:#94a3b8;white-space:nowrap;margin-left:auto';
       os.textContent=n.opp;foot.appendChild(os);
     }
-    el.style.left=(n.x+pan.x)+'px';el.style.top=(n.y+pan.y)+'px';
+    // Position using screen coords; apply zoom via CSS transform
+    const sp=w2s(n.x,n.y);
+    el.style.left=sp.x+'px';
+    el.style.top=sp.y+'px';
+    el.style.transform=`scale(${zoom})`;
+    el.style.transformOrigin='top left';
   });
   nl.className='nl'+(mode==='connect'?' cm-on':'');
   // auto-save after every render
@@ -760,49 +997,211 @@ function onNMD(ev){
   selectNode(id);
   const n=nodes.find(x=>x.id===id);
   const wr=cw.getBoundingClientRect();
-  dragN=id;dragOff={x:ev.clientX-wr.left-(n.x+pan.x),y:ev.clientY-wr.top-(n.y+pan.y)};
+  const sx=ev.clientX-wr.left, sy=ev.clientY-wr.top;
+  const wp=s2w(sx,sy);
+  dragN=id;dragOff={x:wp.x-n.x, y:wp.y-n.y};
   ev.currentTarget.classList.add('dragging');ev.preventDefault();
 }
 document.addEventListener('mousemove',ev=>{
-  const wr=cw.getBoundingClientRect();const cx=ev.clientX-wr.left,cy=ev.clientY-wr.top;
-  if(dragN){const n=nodes.find(x=>x.id===dragN);n.x=cx-dragOff.x-pan.x;n.y=cy-dragOff.y-pan.y;render();return;}
+  const wr=cw.getBoundingClientRect();
+  const sx=ev.clientX-wr.left, sy=ev.clientY-wr.top;
+
+  // edge endpoint rewire drag (magnetized)
+  if(edgeDrag){
+    edgeDrag.sx=sx; edgeDrag.sy=sy;
+    const cand=nearestPort(sx,sy);
+    edgeDrag.snap=null;
+    document.querySelectorAll('.fcn').forEach(e=>e.classList.remove('tgn'));
+    if(cand && cand.d<=EDGE_SNAP_PX){
+      const pt=portXY(cand.id,cand.port);
+      edgeDrag.snap={id:cand.id,port:cand.port,pt};
+      const el=document.getElementById('nd-'+cand.id);
+      if(el) el.classList.add('tgn');
+    }
+    renderSvg();
+    return;
+  }
+
+  // edge label drag (constrained to curve)
+  if(labelDrag){
+    const e=edges.find(x=>x.id===labelDrag.id);
+    if(e){
+      const d=edgeD(e);
+      if(d) e.labelT = projectToPathT(d, sx, sy);
+    }
+    renderSvg();
+    return;
+  }
+
+  // node drag
+  if(dragN){
+    const n=nodes.find(x=>x.id===dragN);
+    const wp=s2w(sx,sy);
+    n.x=wp.x-dragOff.x; n.y=wp.y-dragOff.y;
+    render();
+    return;
+  }
+
+  // connection drawing
   if(connSrc){
-    drawPt={x:cx,y:cy};
+    drawPt={x:sx,y:sy};
     document.querySelectorAll('.fcn').forEach(e=>e.classList.remove('tgn'));
     const ov=document.elementFromPoint(ev.clientX,ev.clientY);
-    if(ov){const ne=ov.closest('.fcn');if(ne&&ne.id!=='nd-'+connSrc.id)ne.classList.add('tgn');}
-    renderSvg();return;
+    if(ov){
+      const ne=ov.closest('.fcn');
+      if(ne&&ne.id!=='nd-'+connSrc.id) ne.classList.add('tgn');
+    }
+    renderSvg();
+    return;
   }
-  if(isPan){pan.x+=ev.clientX-panStart.x;pan.y+=ev.clientY-panStart.y;panStart={x:ev.clientX,y:ev.clientY};render();}
+
+  // pan
+  if(isPan){
+    pan.x+=ev.clientX-panStart.x;
+    pan.y+=ev.clientY-panStart.y;
+    panStart={x:ev.clientX,y:ev.clientY};
+    render();
+  }
 });
+
 document.addEventListener('mouseup',ev=>{
-  if(dragN){const el=document.getElementById('nd-'+dragN);if(el)el.classList.remove('dragging');dragN=null;return;}
+  if(dragN){
+    const el=document.getElementById('nd-'+dragN);
+    if(el)el.classList.remove('dragging');
+    dragN=null;
+    return;
+  }
+  if(labelDrag){
+    labelDrag=null;
+    renderSvg();
+    return;
+  }
+
+
+  if(edgeDrag){
+    document.querySelectorAll('.fcn').forEach(e=>e.classList.remove('tgn'));
+    const ed=edges.find(x=>x.id===edgeDrag.id);
+    if(ed && edgeDrag.snap){
+      if(edgeDrag.end==='from'){
+        ed.from=edgeDrag.snap.id;
+        ed.fp=edgeDrag.snap.port;
+      } else {
+        ed.to=edgeDrag.snap.id;
+        ed.tp=edgeDrag.snap.port;
+      }
+    }
+    edgeDrag=null;
+    render();
+    return;
+  }
+
   if(connSrc){
     document.querySelectorAll('.fcn').forEach(e=>e.classList.remove('tgn'));
     const ov=document.elementFromPoint(ev.clientX,ev.clientY);
     let toId=null,toPort='top';
-    if(ov){const pe=ov.classList.contains('port')?ov:null;const ne=ov.closest('.fcn');if(pe)toPort=pe.dataset.p;if(ne)toId=ne.id.replace('nd-','');}
+    if(ov){
+      const pe=ov.classList.contains('port')?ov:null;
+      const ne=ov.closest('.fcn');
+      if(pe)toPort=pe.dataset.p;
+      if(ne)toId=ne.id.replace('nd-','');
+    }
     if(toId&&toId!==connSrc.id)edges.push({id:'e'+(++EID),from:connSrc.id,to:toId,fp:connSrc.port,tp:toPort,label:''});
     connSrc=null;drawPt=null;render();return;
   }
-  if(isPan)isPan=false;
+
+  if(isPan){isPan=false;cw.style.cursor='default';}
 });
 
 // ══════════════════════════════════════════════
-// PAN / KEYS
+// PAN / KEYS / ZOOM
 // ══════════════════════════════════════════════
 document.addEventListener('keydown',ev=>{
-  if(ev.code==='Space'&&!ev.target.matches('input,textarea,select')){spDown=true;cw.style.cursor='grab';ev.preventDefault();}
   if(ev.code==='Escape'){connSrc=null;drawPt=null;closePops();render();}
   if((ev.code==='Delete'||ev.code==='Backspace')&&!ev.target.matches('input,textarea,select')){if(selNode)deleteNode();else if(selEdge)deleteEdge();}
+  if(!ev.target.matches('input,textarea,select')){
+    if(ev.key==='+'||ev.key==='='){ev.preventDefault();zoomStep(+0.1);}
+    if(ev.key==='-'){ev.preventDefault();zoomStep(-0.1);}
+    if(ev.key==='0'){ev.preventDefault();zoom=1;fitView();}
+  }
 });
-document.addEventListener('keyup',ev=>{if(ev.code==='Space'){spDown=false;cw.style.cursor='default';}});
+
+// Background click = pan; SVG mousedown
 sv.addEventListener('mousedown',ev=>{
-  if(ev.button===1||spDown){isPan=true;panStart={x:ev.clientX,y:ev.clientY};cw.style.cursor='grabbing';ev.preventDefault();}
-  else if(ev.button===0&&!ev.target.closest('[data-p]')){deselectAll();closePops();}
+  if(ev.button===0){
+    const overNode=document.elementFromPoint(ev.clientX,ev.clientY)?.closest?.('.fcn');
+    if(!overNode&&!ev.target.closest('[data-p]')){
+      isPan=true;panStart={x:ev.clientX,y:ev.clientY};
+      cw.style.cursor='grabbing';
+      deselectAll();closePops();
+      ev.preventDefault();
+    }
+  }
+  if(ev.button===1){isPan=true;panStart={x:ev.clientX,y:ev.clientY};cw.style.cursor='grabbing';ev.preventDefault();}
 });
-nl.addEventListener('mousedown',ev=>{if(ev.button===1||spDown){isPan=true;panStart={x:ev.clientX,y:ev.clientY};}});
-cw.addEventListener('wheel',ev=>{ev.preventDefault();pan.x-=ev.deltaX;pan.y-=ev.deltaY;render();},{passive:false});
+nl.addEventListener('mousedown',ev=>{
+  if(ev.button===1){isPan=true;panStart={x:ev.clientX,y:ev.clientY};}
+});
+
+// Wheel: zoom to cursor (Ctrl+wheel or mouse wheel), or pan (trackpad scroll)
+cw.addEventListener('wheel',ev=>{
+  ev.preventDefault();
+  const wr=cw.getBoundingClientRect();
+  const mx=ev.clientX-wr.left, my=ev.clientY-wr.top;
+  if(ev.ctrlKey||(!ev.shiftKey&&Math.abs(ev.deltaY)>30&&ev.deltaX===0)){
+    // Zoom toward cursor
+    const factor = ev.ctrlKey ? 1-ev.deltaY*0.02 : ev.deltaY<0 ? 1.1 : 0.9;
+    const newZ = Math.min(3, Math.max(0.12, zoom*factor));
+    pan.x = mx-(mx-pan.x)*(newZ/zoom);
+    pan.y = my-(my-pan.y)*(newZ/zoom);
+    zoom = newZ;
+    updateZoomPill();
+  } else {
+    pan.x -= ev.deltaX;
+    pan.y -= ev.deltaY;
+  }
+  render();
+},{passive:false});
+
+// ══════════════════════════════════════════════
+// ZOOM
+// ══════════════════════════════════════════════
+function zoomStep(delta){
+  const wr=cw.getBoundingClientRect();
+  const mx=wr.width/2, my=wr.height/2;
+  const newZ=Math.min(3,Math.max(0.12,zoom+delta));
+  pan.x=mx-(mx-pan.x)*(newZ/zoom);
+  pan.y=my-(my-pan.y)*(newZ/zoom);
+  zoom=newZ;
+  updateZoomPill();
+  render();
+}
+function updateZoomPill(){
+  const el=document.getElementById('zoomPill');
+  if(el) el.textContent=Math.round(zoom*100)+'%';
+}
+
+// ══════════════════════════════════════════════
+// SHAPE PICKER
+// ══════════════════════════════════════════════
+document.getElementById('shapePicker').addEventListener('click',ev=>{
+  const sw=ev.target.closest('[data-sh]');if(!sw||!selNode)return;
+  const n=nodes.find(x=>x.id===selNode);
+  if(n){n.shape=sw.dataset.sh;render();}
+  document.querySelectorAll('#shapePicker [data-sh]').forEach(s=>s.style.outline='');
+  sw.style.outline='2px solid #0f1f38';
+});
+
+// ══════════════════════════════════════════════
+// FUTURE STATE
+// ══════════════════════════════════════════════
+function toggleFuture(){
+  if(!selNode)return;
+  const n=nodes.find(x=>x.id===selNode);
+  if(!n)return;
+  n.future=!n.future;
+  document.getElementById('futureBtn').classList.toggle('on',n.future);
+  render();
+}
 
 // ══════════════════════════════════════════════
 // CONNECT
@@ -828,9 +1227,22 @@ function setMode(m){
 // ══════════════════════════════════════════════
 // SELECTION
 // ══════════════════════════════════════════════
-function selectNode(id){selNode=id;selEdge=null;document.getElementById('delBtn').style.display=id?'inline-block':'none';render();}
+function selectNode(id){
+  selNode=id;selEdge=null;
+  document.getElementById('delBtn').style.display=id?'inline-block':'none';
+  // Update future state button state
+  const n=id?nodes.find(x=>x.id===id):null;
+  document.getElementById('futureBtn').classList.toggle('on',!!(n&&n.future));
+  render();
+}
 function deselectAll(){selNode=null;selEdge=null;document.getElementById('delBtn').style.display='none';render();}
-function clickEdge(id,ev){selEdge=id;selNode=null;document.getElementById('delBtn').style.display='none';render();openEdge(id,ev);}
+// Single-click selects (shows draggable endpoints). Double-click opens the edge editor.
+function clickEdge(id,ev){
+  selEdge=id; selNode=null;
+  document.getElementById('delBtn').style.display='none';
+  // Only re-render the SVG for snappy selection.
+  renderSvg();
+}
 
 // ══════════════════════════════════════════════
 // NODE POPUP
@@ -842,6 +1254,8 @@ function openNode(id){
   document.getElementById('pTag').value=n.tag||'';document.getElementById('pWt').value=n.wt||'';
   document.getElementById('pOwn').value=n.own||'';document.getElementById('pOpp').value=n.opp||'';
   document.getElementById('pGap').value=n.gap?'1':'';
+  document.getElementById('pShape').value=n.shape||'';
+  document.getElementById('pFuture').value=n.future?'1':'';
   placePopup('nPop',id);document.getElementById('nPop').classList.add('vis');
   document.getElementById('pTit').focus();
 }
@@ -850,7 +1264,10 @@ function saveNode(){
   n.title=document.getElementById('pTit').value;n.meta=document.getElementById('pMet').value;
   n.tag=document.getElementById('pTag').value;n.wt=document.getElementById('pWt').value;
   n.own=document.getElementById('pOwn').value;n.opp=document.getElementById('pOpp').value;
-  n.gap=document.getElementById('pGap').value==='1';closePops();render();
+  n.gap=document.getElementById('pGap').value==='1';
+  n.shape=document.getElementById('pShape').value;
+  n.future=document.getElementById('pFuture').value==='1';
+  closePops();render();
 }
 function deleteNode(){
   const id=editNid||selNode;if(!id)return;
@@ -882,10 +1299,28 @@ function deleteGroup(){groups=groups.filter(x=>x.id!==editGid);editGid=null;clos
 function openEdge(id,ev){
   editEid=id;const e=edges.find(x=>x.id===id);
   document.getElementById('eLbl').value=e?e.label||'':'';
+  document.getElementById('eFont').value=(e && e.fontSize!=null)?e.fontSize:8;
   placeXY('ePop',ev.clientX,ev.clientY);document.getElementById('ePop').classList.add('vis');
   document.getElementById('eLbl').focus();
 }
-function saveEdge(){const e=edges.find(x=>x.id===editEid);if(e)e.label=document.getElementById('eLbl').value;closePops();render();}
+function saveEdge(){
+  const e=edges.find(x=>x.id===editEid);
+  if(e){
+    e.label=document.getElementById('eLbl').value;
+    const fs=parseInt(document.getElementById('eFont').value,10);
+    if(!isNaN(fs)) e.fontSize=Math.max(6,Math.min(20,fs));
+  }
+  closePops();render();
+
+function bumpEdgeFont(delta){
+  const inp=document.getElementById('eFont');
+  const v=parseInt(inp.value||'8',10);
+  const nv=Math.max(6,Math.min(20,(isNaN(v)?8:v)+delta));
+  inp.value=nv;
+  const e=edges.find(x=>x.id===editEid);
+  if(e){ e.fontSize=nv; renderSvg(); }
+}
+}
 function deleteEdge(){
   const id=editEid||selEdge;if(!id)return;
   edges=edges.filter(x=>x.id!==id);selEdge=null;editEid=null;closePops();render();
@@ -919,7 +1354,8 @@ cw.addEventListener('click',ev=>{
 // ══════════════════════════════════════════════
 function addNode(){
   const wr=cw.getBoundingClientRect();const id='N'+(++NID);
-  nodes.push({id,x:wr.width/2-pan.x-90,y:wr.height/2-pan.y-35,title:'New Step',meta:'Double-click to edit',tag:'Step',color:'',gap:false,wt:'manual',own:'',opp:'All'});
+  const wp=s2w(wr.width/2-90, wr.height/2-35);
+  nodes.push({id,x:wp.x,y:wp.y,title:'New Step',meta:'Double-click to edit',tag:'Step',color:'',gap:false,wt:'manual',own:'',opp:'All',shape:'',future:false});
   render();setTimeout(()=>openNode(id),60);
 }
 function addGroup(){
@@ -938,9 +1374,20 @@ function deleteSelected(){if(selNode)deleteNode();else if(selEdge)deleteEdge();}
 // FIT VIEW
 // ══════════════════════════════════════════════
 function fitView(){
+  if(!nodes.length&&!groups.length) return;
+  const wr=cw.getBoundingClientRect();
   const allX=nodes.map(n=>n.x).concat(groups.map(g=>g.x));
   const allY=nodes.map(n=>n.y).concat(groups.map(g=>g.y));
-  pan.x=28-Math.min(...allX);pan.y=28-Math.min(...allY);render();
+  const allX2=nodes.map(n=>n.x+200).concat(groups.map(g=>g.x+g.w));
+  const allY2=nodes.map(n=>n.y+100).concat(groups.map(g=>g.y+g.h));
+  const minX=Math.min(...allX)-30, minY=Math.min(...allY)-30;
+  const maxX=Math.max(...allX2)+30, maxY=Math.max(...allY2)+30;
+  const cw_=maxX-minX, ch_=maxY-minY;
+  zoom=Math.max(0.12, Math.min(1, (wr.width-40)/cw_, (wr.height-40)/ch_));
+  pan.x=((wr.width-cw_*zoom)/2)-minX*zoom;
+  pan.y=20-minY*zoom;
+  updateZoomPill();
+  render();
 }
 
 // ══════════════════════════════════════════════
@@ -1120,7 +1567,7 @@ const LS_KEY = 'lifex_process_map_state';
 let saveTimer = null;
 
 function getState(){
-  return {nodes, edges, groups, NID, EID, GID, pan};
+  return {nodes, edges, groups, NID, EID, GID, pan, zoom};
 }
 
 function applyState(s){
@@ -1132,6 +1579,7 @@ function applyState(s){
   if(s.EID)    EID    = s.EID;
   if(s.GID)    GID    = s.GID;
   if(s.pan)    pan    = s.pan;
+  if(s.zoom)   zoom   = s.zoom;
 }
 
 function saveLocal(){
@@ -1256,11 +1704,10 @@ function setGhStatus(cls, msg){
 // ══════════════════════════════════════════════
 // INIT
 // ══════════════════════════════════════════════
-// Try to restore from localStorage first.
-// If nothing saved yet, use the hardcoded data above.
 const restored = loadLocal();
 render();
 if(!restored) fitView();
+updateZoomPill();
 setSaveStatus('saved', '● local saved');
 </script>
 </body>
